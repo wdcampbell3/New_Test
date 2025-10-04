@@ -49,6 +49,16 @@
     <aside class="min-h-screen w-64 bg-base-200 text-base-content">
       <div class="p-4">
         <h2 class="text-2xl font-bold mb-6">🧪 Experiments</h2>
+
+        <!-- Back to Home button -->
+        <a
+          href="/"
+          class="btn btn-block mb-4 text-white border-0 hover:opacity-90"
+          style="background-color: #660460;"
+        >
+          ← Back to Home
+        </a>
+
         <ul class="menu gap-2">
           {#each experiments as experiment}
             <li>
