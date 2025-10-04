@@ -5,12 +5,13 @@ import {
   PUBLIC_SUPABASE_URL,
 } from "$env/static/public"
 import { createServerClient } from "@supabase/ssr"
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import type { Handle } from "@sveltejs/kit"
 import { sequence } from "@sveltejs/kit/hooks"
+import type { Database } from "./DatabaseDefinitions"
 
 export const supabase: Handle = async ({ event, resolve }) => {
-  event.locals.supabase = createServerClient(
+  event.locals.supabase = createServerClient<Database>(
     PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY,
     {
@@ -28,9 +29,9 @@ export const supabase: Handle = async ({ event, resolve }) => {
         },
       },
     },
-  )
+  ) as unknown as SupabaseClient<Database>
 
-  event.locals.supabaseServiceRole = createClient(
+  event.locals.supabaseServiceRole = createClient<Database>(
     PUBLIC_SUPABASE_URL,
     PRIVATE_SUPABASE_SERVICE_ROLE,
     { auth: { persistSession: false } },
