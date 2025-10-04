@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte"
 
-  let canvas: HTMLCanvasElement
+  let canvas = $state<HTMLCanvasElement>()
   let ctx: CanvasRenderingContext2D
   let isDrawing = $state(false)
   let brushColor = $state("#000000")
@@ -117,9 +117,7 @@
 
         <!-- Tool Selection -->
         <div class="form-control mb-4">
-          <label class="label">
-            <span class="label-text font-semibold">Tool</span>
-          </label>
+          <span class="label-text font-semibold mb-2 block">Tool</span>
           <div class="btn-group w-full">
             <button
               class="btn btn-sm flex-1"
@@ -140,9 +138,7 @@
 
         <!-- Color Picker -->
         <div class="form-control mb-4">
-          <label class="label">
-            <span class="label-text font-semibold">Color</span>
-          </label>
+          <span class="label-text font-semibold mb-2 block">Color</span>
           <div class="grid grid-cols-5 gap-2 mb-2">
             {#each colors as color}
               <button
@@ -154,6 +150,7 @@
                   ? '#e5e7eb'
                   : color}"
                 onclick={() => (brushColor = color)}
+                aria-label="Select color {color}"
               ></button>
             {/each}
           </div>
@@ -166,11 +163,9 @@
 
         <!-- Brush Size -->
         <div class="form-control mb-4">
-          <label class="label">
-            <span class="label-text font-semibold"
-              >Brush Size: {brushSize}px</span
-            >
-          </label>
+          <span class="label-text font-semibold mb-2 block"
+            >Brush Size: {brushSize}px</span
+          >
           <input
             type="range"
             min="1"
