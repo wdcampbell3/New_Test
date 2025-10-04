@@ -200,7 +200,7 @@
     // Move paddle to touch position (centered on touch)
     playerPaddle.y = Math.max(
       0,
-      Math.min(600 - paddleHeight, scaledY - paddleHeight / 2)
+      Math.min(600 - paddleHeight, scaledY - paddleHeight / 2),
     )
   }
 </script>
