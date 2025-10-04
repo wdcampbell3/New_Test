@@ -6,6 +6,7 @@
     { name: "Worm Game", path: "/worm-game", icon: "🐛" },
     { name: "Drawing Canvas", path: "/drawing-canvas", icon: "🎨" },
     { name: "Pong", path: "/pong", icon: "🏓" },
+    { name: "Space Invaders", path: "/space-invaders", icon: "👾" },
   ]
 </script>
 
