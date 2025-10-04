@@ -187,6 +187,22 @@
     playerPaddle.y = 260
     computerPaddle.y = 260
   }
+
+  // Touch/Mobile controls
+  function handleTouchMove(e: TouchEvent) {
+    if (!gameRunning) return
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0]
+    const touchY = touch.clientY - rect.top
+    const scaleY = 600 / rect.height
+    const scaledY = touchY * scaleY
+
+    // Move paddle to touch position (centered on touch)
+    playerPaddle.y = Math.max(
+      0,
+      Math.min(600 - paddleHeight, scaledY - paddleHeight / 2)
+    )
+  }
 </script>
 
 <svelte:window onkeydown={handleKeyDown} onkeyup={handleKeyUp} />
@@ -201,7 +217,9 @@
         bind:this={canvas}
         width="800"
         height="600"
-        class="border-4 border-base-300 rounded-lg shadow-xl"
+        class="border-4 border-base-300 rounded-lg shadow-xl touch-none"
+        ontouchmove={handleTouchMove}
+        ontouchstart={handleTouchMove}
       ></canvas>
     </div>
 
@@ -233,9 +251,10 @@
             <h3 class="font-semibold mb-2">How to Play:</h3>
             <ul class="list-disc list-inside space-y-1 text-sm">
               <li>
-                Use <kbd class="kbd kbd-sm">↑</kbd> and
-                <kbd class="kbd kbd-sm">↓</kbd> arrow keys to move your paddle
+                Desktop: Use <kbd class="kbd kbd-sm">↑</kbd> and
+                <kbd class="kbd kbd-sm">↓</kbd> arrow keys
               </li>
+              <li>Mobile: Touch and drag on the canvas to move your paddle</li>
               <li>Blue paddle (left) is you</li>
               <li>Red paddle (right) is the computer</li>
               <li>First to miss the ball gives the opponent a point</li>
