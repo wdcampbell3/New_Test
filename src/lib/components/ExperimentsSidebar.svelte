@@ -4,7 +4,8 @@
 	const experiments = [
 		{ name: 'Loan Calculator', path: '/loan-calculator', icon: '💰' },
 		{ name: 'Worm Game', path: '/worm-game', icon: '🐛' },
-		{ name: 'Drawing Canvas', path: '/drawing-canvas', icon: '🎨' }
+		{ name: 'Drawing Canvas', path: '/drawing-canvas', icon: '🎨' },
+		{ name: 'Pong', path: '/pong', icon: '🏓' }
 	];
 </script>
 
