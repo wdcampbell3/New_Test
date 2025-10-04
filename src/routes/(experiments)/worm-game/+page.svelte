@@ -155,8 +155,9 @@
 	<title>Worm Game</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-4xl p-6">
-	<h1 class="mb-8 text-center text-4xl font-bold">Worm Game</h1>
+<div class="min-h-screen bg-gray-200 py-8">
+	<div class="container mx-auto max-w-4xl px-6">
+		<h1 class="mb-8 text-center text-4xl font-bold">Worm Game</h1>
 
 	<div class="flex flex-col items-center gap-6">
 		<!-- Score Display -->
@@ -182,7 +183,6 @@
 						display: grid;
 						grid-template-columns: repeat({GRID_SIZE}, {CELL_SIZE}px);
 						grid-template-rows: repeat({GRID_SIZE}, {CELL_SIZE}px);
-						gap: 1px;
 						background: #e5e7eb;
 						border: 2px solid #9ca3af;
 					"
@@ -197,9 +197,9 @@
 							class="cell"
 							style="
 								background: {isHead
-								? '#dc2626'
+								? '#9333ea'
 								: isWorm
-									? '#ef4444'
+									? '#a855f7'
 									: isFood
 										? '#22c55e'
 										: '#f3f4f6'};
@@ -277,6 +277,7 @@
 				<div></div>
 			</div>
 		{/if}
+	</div>
 	</div>
 </div>
 
