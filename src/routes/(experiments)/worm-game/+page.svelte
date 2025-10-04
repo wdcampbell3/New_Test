@@ -196,7 +196,7 @@
 						border: 2px solid #9ca3af;
 					"
           >
-            {#each Array(GRID_SIZE * GRID_SIZE) as _, i (i)}
+            {#each Array(GRID_SIZE * GRID_SIZE).fill(0).map((_, i) => i) as i (i)}
               {@const x = i % GRID_SIZE}
               {@const y = Math.floor(i / GRID_SIZE)}
               {@const isWorm = worm.some(
