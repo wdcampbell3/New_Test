@@ -19,7 +19,7 @@
   let nextDirection = $state<Direction>("RIGHT")
   let food = $state<Position>({ x: 15, y: 10 })
 
-  let gameInterval: number
+  let gameInterval: ReturnType<typeof setInterval> | undefined
 
   function generateFood() {
     let newFood: Position

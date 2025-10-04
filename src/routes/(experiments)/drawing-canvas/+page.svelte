@@ -35,6 +35,7 @@
   }
 
   function updateCursorPosition(e: MouseEvent | TouchEvent) {
+    if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
@@ -78,6 +79,7 @@
   }
 
   function clearCanvas() {
+    if (!canvas) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     // Fill with white background
     ctx.fillStyle = "#ffffff"
@@ -85,6 +87,7 @@
   }
 
   function downloadImage() {
+    if (!canvas) return
     const link = document.createElement("a")
     link.download = "drawing.png"
     link.href = canvas.toDataURL()
@@ -92,6 +95,7 @@
   }
 
   onMount(() => {
+    if (!canvas) return
     const context = canvas.getContext("2d")
     if (!context) return
     ctx = context
