@@ -5,7 +5,8 @@ import {
   PUBLIC_SUPABASE_URL,
 } from "$env/static/public"
 import { createServerClient } from "@supabase/ssr"
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { createClient } from "@supabase/supabase-js"
 import type { Handle } from "@sveltejs/kit"
 import { sequence } from "@sveltejs/kit/hooks"
 import type { Database } from "./DatabaseDefinitions"

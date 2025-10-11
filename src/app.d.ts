@@ -1,7 +1,7 @@
-import {
+import type {
   Session,
   SupabaseClient,
-  type AMREntry,
+  AMREntry,
   User,
 } from "@supabase/supabase-js"
 import { Database } from "./DatabaseDefinitions"

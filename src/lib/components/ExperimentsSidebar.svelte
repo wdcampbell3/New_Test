@@ -7,6 +7,7 @@
     { name: "Drawing Canvas", path: "/drawing-canvas", icon: "🎨" },
     { name: "Pong", path: "/pong", icon: "🏓" },
     { name: "Space Invaders", path: "/space-invaders", icon: "👾" },
+    { name: "Minesweeper", path: "/minesweeper", icon: "💣" },
   ]
 </script>
 
