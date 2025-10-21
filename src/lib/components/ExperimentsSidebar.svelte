@@ -2,12 +2,12 @@
   import { page } from "$app/stores"
 
   const experiments = [
-    { name: "Loan Calculator", path: "/loan-calculator", icon: "💰" },
-    { name: "Worm Game", path: "/worm-game", icon: "🐛" },
-    { name: "Drawing Canvas", path: "/drawing-canvas", icon: "🎨" },
-    { name: "Pong", path: "/pong", icon: "🏓" },
+    { name: "Snake-adelic", path: "/worm-game", icon: "🐍" },
+    { name: "Cosmic Pong", path: "/pong", icon: "🏓" },
+    { name: "Light Particles", path: "/light-cycles", icon: "🏍️" },
     { name: "Space Invaders", path: "/space-invaders", icon: "👾" },
-    { name: "Minesweeper", path: "/minesweeper", icon: "💣" },
+    { name: "Mine Buster", path: "/minesweeper", icon: "💣" },
+    { name: "Tower Assault", path: "/tower-defense", icon: "🗼" },
   ]
 </script>
 

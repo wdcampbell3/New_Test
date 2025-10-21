@@ -1,51 +1,62 @@
 <script lang="ts">
   const experiments = [
     {
-      name: "Loan Calculator",
-      path: "/loan-calculator",
-      description: "Calculate loan payments and interest",
-      image:
-        "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&h=300&fit=crop",
-    },
-    {
-      name: "Worm Game",
+      name: "🐍 Snake-adelic",
       path: "/worm-game",
-      description: "Classic snake game with a twist",
+      description: "Psychedelic snake game with power-ups",
       image:
-        "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=300&fit=crop",
+        "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=300&fit=crop",
     },
     {
-      name: "Drawing Canvas",
-      path: "/drawing-canvas",
-      description: "Create digital art with brushes and colors",
-      image:
-        "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&h=300&fit=crop",
-    },
-    {
-      name: "Pong",
+      name: "🏓 Cosmic Pong",
       path: "/pong",
       description: "Classic arcade game - beat the AI!",
+      image:
+        "https://images.unsplash.com/photo-1534158914592-062992fbe900?w=400&h=300&fit=crop",
+    },
+    {
+      name: "💡 Light Particles",
+      path: "/light-cycles",
+      description: "TRON-style light particle battles with power-ups",
+      image:
+        "https://images.unsplash.com/photo-1617791160505-6f00504e3519?w=400&h=300&fit=crop",
+    },
+    {
+      name: "👾 Space Invaders",
+      path: "/space-invaders",
+      description: "Defend Earth from alien invasion",
       image:
         "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=300&fit=crop",
     },
     {
-      name: "Space Invaders",
-      path: "/space-invaders",
-      description: "Defend Earth from alien invasion",
+      name: "💣 Mine Buster",
+      path: "/minesweeper",
+      description: "Classic puzzle game with power-ups - find all the mines",
       image:
-        "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=400&h=300&fit=crop",
+        "https://images.unsplash.com/photo-1635514569146-9a9607ecf303?w=400&h=300&fit=crop",
+    },
+    {
+      name: "🗼 Tower Assault",
+      path: "/tower-defense",
+      description: "Build towers and defend your base",
+      image:
+        "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&h=300&fit=crop",
     },
   ]
 </script>
+
+<svelte:head>
+  <title>Dougie's Game Hub | Vibe Coding Updates to some Classics!</title>
+</svelte:head>
 
 <div class="min-h-screen bg-gray-100">
   <div class="container mx-auto px-4 py-12">
     <!-- Header -->
     <div class="text-center mb-16">
       <h1 class="text-6xl font-bold mb-4" style="color: #660460;">
-        Dougie's Hub
+        Dougie's Game Hub
       </h1>
-      <p class="text-2xl text-gray-600 italic">Experiments in Vibe Coding</p>
+      <p class="text-2xl text-gray-600 italic">Vibe Coding Updates to some Classics!</p>
     </div>
 
     <!-- Experiment Cards -->
