@@ -24,7 +24,7 @@
     gridY: number
     x: number
     y: number
-    type: "basic" | "sniper" | "splash" | "laser" | "freeze" | "missile"
+    type: "basic" | "sniper" | "blast" | "laser" | "freeze" | "missile"
     damage: number
     range: number
     fireRate: number
@@ -44,7 +44,7 @@
     damage: number
     speed: number
     target: Enemy | null
-    type: "basic" | "sniper" | "splash" | "laser" | "freeze" | "missile"
+    type: "basic" | "sniper" | "blast" | "laser" | "freeze" | "missile"
   }
 
   const GRID_SIZE = 40
@@ -66,7 +66,7 @@
   let enemies = $state<Enemy[]>([])
   let towers = $state<Tower[]>([])
   let projectiles = $state<Projectile[]>([])
-  let selectedTowerType = $state<"basic" | "sniper" | "splash" | "laser" | "freeze" | "missile" | null>(null)
+  let selectedTowerType = $state<"basic" | "sniper" | "blast" | "laser" | "freeze" | "missile" | null>(null)
   let hoveredCell = $state<{ x: number; y: number } | null>(null)
   let nextEnemyId = 0
   let nextTowerId = 0
@@ -74,16 +74,28 @@
   let enemiesSpawned = $state(0)
   let lastSpawnTime = $state(0)
   let enemySpeedMultiplier = $state(1)
-  let randomizePath = $state(false)
+  let randomizePath = $state(true) // Default to true
   let secondEntrance = $state(false)
+  let soundEnabled = $state(true) // Add sound toggle
+  let airAttackEnabled = $state(false) // Add air attack mode
+  let airAttackUsedThisWave = $state(false) // Track if air attack happened this wave
+  let jetPosition = $state<{ x: number; y: number } | null>(null) // Jet emoji position for animation
+  let explosionPosition = $state<{ x: number; y: number } | null>(null) // Explosion position
+  let level = $state(1) // Add level system
+  let wavesPerLevel = $state(5) // Waves needed to complete a level
+  let levelCompleted = $state(false) // Show celebration when level is completed
+  let countdown = $state(0) // Countdown timer before wave starts
+  let countdownInterval: number | null = null
+  let showBuyPlaceTowers = $state(false) // Show "Buy & Place Towers" overlay
+  let blockedSquares = $state<Set<string>>(new Set()) // Squares blocked by air attack (stored as "x,y")
 
   // Tower quantity limits
   let towerQuantities = $state({
-    basic: 6,
-    sniper: 5,
-    splash: 4,
-    laser: 3,
-    freeze: 2,
+    basic: 5,
+    sniper: 2,
+    blast: 4,
+    laser: 2,
+    freeze: 3,
     missile: 1
   })
 
@@ -138,27 +150,37 @@
     ],
   ]
 
-  // Secondary entrance paths (start from top or bottom)
-  const secondaryPathPatterns: Point[][] = [
-    // Pattern 1 (From top)
-    [
-      { x: 10, y: 0 },
-      { x: 10, y: 7 },
-      { x: 20, y: 7 },
-    ],
-    // Pattern 2 (From bottom)
-    [
-      { x: 5, y: 15 },
-      { x: 5, y: 7 },
-      { x: 20, y: 7 },
-    ],
-    // Pattern 3 (From top, different path)
-    [
-      { x: 15, y: 0 },
-      { x: 15, y: 10 },
-      { x: 20, y: 10 },
-    ],
-  ]
+  // Secondary entrance paths - these merge with primary path before exit
+  // They need to connect to a point on the primary path, not go directly to edge
+  const getSecondaryPathForPrimary = (primaryPath: Point[]): Point[][] => {
+    // Find a merge point in the middle section of the primary path
+    const mergeIndex = Math.floor(primaryPath.length / 2)
+    const mergePoint = primaryPath[mergeIndex]
+
+    return [
+      // Pattern 1 (From top, merges with main path)
+      [
+        { x: mergePoint.x - 3, y: 0 },
+        { x: mergePoint.x - 3, y: mergePoint.y },
+        mergePoint,
+      ],
+      // Pattern 2 (From bottom, merges with main path)
+      [
+        { x: mergePoint.x + 3, y: 15 },
+        { x: mergePoint.x + 3, y: mergePoint.y },
+        mergePoint,
+      ],
+      // Pattern 3 (From top right, merges with main path)
+      [
+        { x: mergePoint.x + 5, y: 0 },
+        { x: mergePoint.x + 5, y: mergePoint.y - 2 },
+        { x: mergePoint.x, y: mergePoint.y - 2 },
+        mergePoint,
+      ],
+    ]
+  }
+
+  let secondaryPathPatterns: Point[][] = $state(getSecondaryPathForPrimary(pathPatterns[0]))
 
   // Current active paths
   let path: Point[] = $state(pathPatterns[0])
@@ -167,23 +189,41 @@
   let secondaryPathPixels: Point[] = $state([])
 
   // Sound effects using Web Audio API
+  // Create a single AudioContext to prevent memory leaks and browser limits
+  let audioContext: AudioContext | null = null
+
+  const getAudioContext = () => {
+    if (!audioContext) {
+      try {
+        audioContext = new AudioContext()
+      } catch (e) {
+        console.error("Failed to create AudioContext:", e)
+      }
+    }
+    return audioContext
+  }
+
   const playSound = (frequency: number, duration: number, type: OscillatorType = "sine") => {
+    if (!soundEnabled) return
+
     try {
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      const ctx = getAudioContext()
+      if (!ctx) return
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
 
       oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      gainNode.connect(ctx.destination)
 
       oscillator.frequency.value = frequency
       oscillator.type = type
 
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration)
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration)
 
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + duration)
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + duration)
     } catch (e) {
       // Silently fail if audio context not available
     }
@@ -203,69 +243,75 @@
     damage: () => playSound(100, 0.1, "sawtooth"),
   }
 
-  // Tower types
+  // Tower types with distinct colors and emojis
   const towerTypes = {
     basic: {
       name: "Basic Tower",
+      emoji: "🔵",
       cost: 50,
       damage: 10,
       range: 120,
-      fireRate: 500,
-      color: "#3b82f6",
+      fireRate: 800,
+      color: "#3b82f6", // Blue
       description: "Balanced tower",
     },
     sniper: {
       name: "Sniper Tower",
-      cost: 100,
-      damage: 50,
+      emoji: "🎯",
+      cost: 120,
+      damage: 30,
       range: 200,
-      fireRate: 1000,
-      color: "#8b5cf6",
+      fireRate: 1500,
+      color: "#a855f7", // Purple (changed for distinction)
       description: "Long range, slow fire",
     },
-    splash: {
-      name: "Splash Tower",
+    blast: {
+      name: "Blast Tower",
+      emoji: "💥",
       cost: 75,
-      damage: 15,
+      damage: 25,
       range: 100,
-      fireRate: 750,
-      color: "#f59e0b",
+      fireRate: 1250,
+      color: "#f59e0b", // Orange
       description: "Area damage",
     },
     laser: {
       name: "Laser Tower",
-      cost: 120,
+      emoji: "⚡",
+      cost: 150,
       damage: 3,
       range: 150,
       fireRate: 100,
-      color: "#06b6d4",
-      description: "15 burst shots, 1.5s reload",
+      color: "#10b981", // Green (changed from cyan for distinction)
+      description: "15 burst shots, 2s reload",
     },
     freeze: {
       name: "Freeze Tower",
+      emoji: "❄️",
       cost: 90,
       damage: 0,
       range: 160,
-      fireRate: 600,
-      color: "#0ea5e9",
+      fireRate: 2500,
+      color: "#06b6d4", // Cyan
       description: "Slows 50%, 5s duration",
     },
     missile: {
       name: "Missile Tower",
-      cost: 150,
-      damage: 56,
-      range: 180,
+      emoji: "🚀",
+      cost: 200,
+      damage: 40,
+      range: 250,
       fireRate: 1500,
-      color: "#dc2626",
+      color: "#dc2626", // Red
       description: "Massive damage (70%)",
     },
   }
 
-  // Enemy types (doubled speed)
+  // Enemy types (balanced speed for level 1 - increased by 10%)
   const enemyTypes = {
-    basic: { health: 50, speed: 2, reward: 10, color: "#ef4444" },
-    fast: { health: 30, speed: 4, reward: 15, color: "#ec4899" },
-    tank: { health: 150, speed: 1, reward: 30, color: "#78350f" },
+    basic: { health: 50, speed: 1.65, reward: 10, color: "#ef4444" },
+    fast: { health: 30, speed: 3.3, reward: 15, color: "#ec4899" },
+    tank: { health: 150, speed: 0.825, reward: 30, color: "#78350f" },
   }
 
   function convertPathToPixels(gridPath: Point[]): Point[] {
@@ -285,6 +331,8 @@
     pathPixels = convertPathToPixels(path)
 
     if (secondEntrance) {
+      // Regenerate secondary paths based on the selected primary path
+      secondaryPathPatterns = getSecondaryPathForPrimary(path)
       const randomSecondaryIndex = Math.floor(Math.random() * secondaryPathPatterns.length)
       secondaryPath = secondaryPathPatterns[randomSecondaryIndex]
       secondaryPathPixels = convertPathToPixels(secondaryPath)
@@ -309,6 +357,7 @@
     health = 20
     money = 200
     wave = 0
+    level = 1
     score = 0
     enemies = []
     towers = []
@@ -320,21 +369,107 @@
     enemiesSpawned = 0
     lastSpawnTime = 0
     towerQuantities = {
-      basic: 6,
-      sniper: 5,
-      splash: 4,
-      laser: 3,
-      freeze: 2,
+      basic: 5,
+      sniper: 2,
+      blast: 4,
+      laser: 2,
+      freeze: 3,
       missile: 1
     }
+    blockedSquares = new Set()
     selectRandomPath()
+
+    // Start countdown timer - auto-starts wave when it reaches 0
+    countdown = 5
+    if (countdownInterval) clearInterval(countdownInterval)
+
+    countdownInterval = setInterval(() => {
+      countdown--
+      if (countdown <= 0) {
+        if (countdownInterval) clearInterval(countdownInterval)
+        countdownInterval = null
+        startWave()
+      }
+    }, 1000) as unknown as number
   }
 
   function startWave() {
     if (enemies.length > 0) return
+
+    // Check if we just completed a level (all waves done)
+    if (wave > 0 && wave % wavesPerLevel === 0) {
+      // Level completed! Show celebration
+      levelCompleted = true
+
+      // Play celebration sound
+      if (soundEnabled) {
+        playSound(523, 0.15, "sine") // C
+        setTimeout(() => playSound(659, 0.15, "sine"), 150) // E
+        setTimeout(() => playSound(784, 0.15, "sine"), 300) // G
+        setTimeout(() => playSound(1047, 0.3, "sine"), 450) // High C
+      }
+
+      // Hide celebration after 1 second, then start countdown that auto-starts wave
+      setTimeout(() => {
+        levelCompleted = false
+
+        // Start 5 second countdown that auto-starts the next wave
+        countdown = 5
+        if (countdownInterval) clearInterval(countdownInterval)
+
+        countdownInterval = setInterval(() => {
+          countdown--
+          if (countdown <= 0) {
+            if (countdownInterval) clearInterval(countdownInterval)
+            countdownInterval = null
+            // Auto-start the next wave after countdown
+            wave++
+            enemiesSpawned = 0
+            lastSpawnTime = Date.now()
+            airAttackUsedThisWave = false
+          }
+        }, 1000) as unknown as number
+      }, 1000)
+
+      // Reset for next level
+      level++
+      wave = 0 // Reset wave counter
+
+      // Increase enemy speed by 15% each level (more gradual than 25%)
+      enemySpeedMultiplier *= 1.15
+
+      // Clear all towers
+      towers = []
+
+      // Restore all tower quantities
+      towerQuantities = {
+        basic: 5,
+        sniper: 2,
+        blast: 4,
+        laser: 2,
+        freeze: 3,
+        missile: 1
+      }
+
+      // Clear blocked squares for new level
+      blockedSquares = new Set()
+
+      // Keep same road pattern if randomize is off, otherwise select new one
+      if (randomizePath) {
+        selectRandomPath()
+      }
+
+      // Reset money to starting amount
+      money = 200
+
+      // Don't continue - countdown will auto-start wave
+      return
+    }
+
     wave++
     enemiesSpawned = 0
     lastSpawnTime = Date.now()
+    airAttackUsedThisWave = false // Reset air attack for new wave
   }
 
   function spawnEnemy() {
@@ -372,14 +507,61 @@
 
   function updateEnemies(deltaTime: number) {
     // Spawn enemies for current wave
-    if (gameRunning && wave > 0 && enemiesSpawned < 10 + wave * 5) {
+    if (gameRunning && wave > 0 && enemiesSpawned < 5 + wave * 3) {
       const now = Date.now()
-      if (now - lastSpawnTime > 1000) {
+      // Spawn interval: 1.5s, 1.4s, 1.3s, 1.2s, then 1s
+      const spawnInterval = Math.max(1000, 1500 - (wave - 1) * 100)
+      if (now - lastSpawnTime > spawnInterval) {
         spawnEnemy()
         enemiesSpawned++
         lastSpawnTime = now
       }
     }
+
+    // Check if we should enable warp speed
+    // 1. Check if any enemy is in range of any tower OR will pass a tower ahead
+    let anyEnemyInRangeOrWillPass = false
+    for (const tower of towers) {
+      for (const enemy of enemies) {
+        // Check current distance
+        const dx = enemy.x - tower.x
+        const dy = enemy.y - tower.y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+        if (distance <= tower.range) {
+          anyEnemyInRangeOrWillPass = true
+          break
+        }
+
+        // Check if enemy will pass this tower (look ahead on path)
+        const enemyPath = enemy.isSecondaryPath ? secondaryPathPixels : pathPixels
+        for (let j = enemy.pathIndex; j < enemyPath.length; j++) {
+          const pathPoint = enemyPath[j]
+          const pathDx = pathPoint.x - tower.x
+          const pathDy = pathPoint.y - tower.y
+          const pathDistance = Math.sqrt(pathDx * pathDx + pathDy * pathDy)
+          if (pathDistance <= tower.range) {
+            anyEnemyInRangeOrWillPass = true
+            break
+          }
+        }
+        if (anyEnemyInRangeOrWillPass) break
+      }
+      if (anyEnemyInRangeOrWillPass) break
+    }
+
+    // 2. Check if player can afford any available towers
+    let canAffordAnyTower = false
+    for (const [key, tower] of Object.entries(towerTypes)) {
+      const quantity = towerQuantities[key as keyof typeof towerQuantities]
+      const isOutOfStock = quantity !== 0 && quantity <= 0
+      if (!isOutOfStock && money >= tower.cost) {
+        canAffordAnyTower = true
+        break
+      }
+    }
+
+    // Enable warp speed if no enemies will pass towers and can't afford more towers
+    const warpSpeed = !anyEnemyInRangeOrWillPass && !canAffordAnyTower && enemies.length > 0
 
     // Move enemies
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -389,12 +571,35 @@
       const now = Date.now()
       if (now < enemy.slowedUntil) {
         enemy.speed = enemy.baseSpeed * 0.5
+      } else if (warpSpeed) {
+        enemy.speed = enemy.baseSpeed * 10 // 10x speed when warping
       } else {
         enemy.speed = enemy.baseSpeed
       }
 
       // Use appropriate path for this enemy
-      const enemyPath = enemy.isSecondaryPath ? secondaryPathPixels : pathPixels
+      let enemyPath = enemy.isSecondaryPath ? secondaryPathPixels : pathPixels
+
+      // Check if enemy from secondary path has reached the merge point
+      if (enemy.isSecondaryPath && enemy.pathIndex >= secondaryPathPixels.length - 1) {
+        // Switch to primary path at the merge point
+        const mergePoint = secondaryPathPixels[secondaryPathPixels.length - 1]
+
+        // Find the index of this merge point in the primary path
+        let mergeIndexInPrimary = -1
+        for (let j = 0; j < pathPixels.length; j++) {
+          if (Math.abs(pathPixels[j].x - mergePoint.x) < 5 && Math.abs(pathPixels[j].y - mergePoint.y) < 5) {
+            mergeIndexInPrimary = j
+            break
+          }
+        }
+
+        if (mergeIndexInPrimary !== -1) {
+          enemy.isSecondaryPath = false
+          enemy.pathIndex = mergeIndexInPrimary
+          enemyPath = pathPixels
+        }
+      }
 
       if (enemy.pathIndex >= enemyPath.length - 1) {
         // Enemy reached the end
@@ -444,7 +649,7 @@
 
         // If in reload mode (burst depleted)
         if (tower.burstCount === 0) {
-          if (now - tower.lastFired >= 1500) {
+          if (now - tower.lastFired >= 2000) {
             tower.burstCount = 15
           } else {
             continue
@@ -529,7 +734,7 @@
             projectile.target.slowedUntil = now + 5000
             sounds.hit()
           }
-        } else if (projectile.type === "splash" || projectile.type === "missile") {
+        } else if (projectile.type === "blast" || projectile.type === "missile") {
           // Splash damage
           sounds.explosion()
           for (const enemy of enemies) {
@@ -554,12 +759,84 @@
     }
   }
 
+  function triggerAirAttack() {
+    // Only trigger during Wave 5 of each level
+    if (!airAttackEnabled || towers.length === 0 || airAttackUsedThisWave || wave % wavesPerLevel !== 0) return
+
+    // Trigger once at halfway through Wave 5
+    const waveProgress = enemiesSpawned / (5 + wave * 3)
+    if (waveProgress < 0.5) return // Wait until halfway through wave
+
+    // Find tower causing most damage
+    const towerDamageStats = new Map<number, number>()
+
+    // Calculate total damage potential for each tower
+    for (const tower of towers) {
+      const damageScore = tower.damage * (tower.level || 1) * (1000 / tower.fireRate)
+      towerDamageStats.set(tower.id, damageScore)
+    }
+
+    // Find tower with highest damage
+    let maxDamage = 0
+    let targetTower: Tower | null = null
+    for (const tower of towers) {
+      const damage = towerDamageStats.get(tower.id) || 0
+      if (damage > maxDamage) {
+        maxDamage = damage
+        targetTower = tower
+      }
+    }
+
+    if (targetTower) {
+      airAttackUsedThisWave = true
+
+      // Store the target tower's grid position for later reference
+      const targetGridX = targetTower.gridX
+      const targetGridY = targetTower.gridY
+      const targetX = targetTower.x
+      const targetY = targetTower.y
+
+      // Start jet animation from left side
+      jetPosition = { x: -50, y: targetY }
+
+      // Animate jet flying to tower
+      const jetInterval = setInterval(() => {
+        if (jetPosition) {
+          jetPosition = { x: jetPosition.x + 20, y: jetPosition.y }
+
+          // When jet reaches tower, drop explosion
+          if (jetPosition.x >= targetX) {
+            clearInterval(jetInterval)
+
+            // Remove tower
+            const index = towers.findIndex(t => t.id === targetTower.id)
+            if (index !== -1) {
+              towers.splice(index, 1)
+              sounds.explosion()
+              // Give some money back
+              money += Math.floor(targetTower.cost * 0.5)
+            }
+
+            // Add permanent skull marker to blocked squares
+            blockedSquares.add(`${targetGridX},${targetGridY}`)
+
+            // Clear jet after animation, but keep explosion as permanent skull
+            setTimeout(() => {
+              jetPosition = null
+            }, 500)
+          }
+        }
+      }, 50)
+    }
+  }
+
   function update(deltaTime: number) {
     if (!gameRunning) return
 
     updateEnemies(deltaTime)
     updateTowers()
     updateProjectiles(deltaTime)
+    triggerAirAttack()
   }
 
   let lastTime = Date.now()
@@ -646,6 +923,7 @@
 
     // Draw towers
     for (const tower of towers) {
+      const towerNow = Date.now()
       const config = towerTypes[tower.type]
       ctx.fillStyle = config.color
       ctx.fillRect(
@@ -655,11 +933,48 @@
         GRID_SIZE - 10,
       )
 
+      // Draw reload cooldown timer
+      const timeSinceLastFired = towerNow - tower.lastFired
+      let reloadTime = tower.fireRate
+
+      // Special handling for laser tower - show reload timer when burst is depleted
+      if (tower.type === "laser" && tower.burstCount === 0) {
+        reloadTime = 2000 // 2s reload
+      }
+
+      const reloadProgress = Math.min(timeSinceLastFired / reloadTime, 1)
+
+      if (reloadProgress < 1) {
+        // Draw circular reload timer
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"
+        ctx.lineWidth = 3
+        ctx.beginPath()
+        ctx.arc(
+          tower.x,
+          tower.y,
+          18,
+          -Math.PI / 2,
+          -Math.PI / 2 + (Math.PI * 2 * reloadProgress),
+        )
+        ctx.stroke()
+      }
+
+      // Draw emoji icon
+      ctx.font = "20px Arial"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.fillText(
+        config.emoji,
+        tower.x,
+        tower.y,
+      )
+
       // Draw level
       if (tower.level > 1) {
         ctx.fillStyle = "#ffffff"
         ctx.font = "bold 12px monospace"
         ctx.textAlign = "center"
+        ctx.textBaseline = "alphabetic"
         ctx.fillText(
           `${tower.level}`,
           tower.x,
@@ -697,7 +1012,7 @@
 
     // Draw projectiles
     for (const projectile of projectiles) {
-      if (projectile.type === "splash") {
+      if (projectile.type === "blast") {
         ctx.fillStyle = "#f59e0b"
         ctx.beginPath()
         ctx.arc(projectile.x, projectile.y, 6, 0, Math.PI * 2)
@@ -745,10 +1060,32 @@
       }
     }
 
+    // Draw jet for air attack
+    if (jetPosition) {
+      ctx.font = "30px Arial"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.fillText("✈️", jetPosition.x, jetPosition.y)
+    }
+
+    // Draw permanent skull markers on blocked squares
+    for (const coordStr of blockedSquares) {
+      const [gridX, gridY] = coordStr.split(',').map(Number)
+      ctx.font = "30px Arial"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.fillText("💀", gridX * GRID_SIZE + GRID_SIZE / 2, gridY * GRID_SIZE + GRID_SIZE / 2)
+    }
+
     animationId = requestAnimationFrame(draw)
   }
 
   function canPlaceTower(gridX: number, gridY: number): boolean {
+    // Check if square is blocked by air attack
+    if (blockedSquares.has(`${gridX},${gridY}`)) {
+      return false
+    }
+
     // Check if on primary path
     for (let i = 0; i < path.length - 1; i++) {
       const p1 = path[i]
@@ -841,8 +1178,13 @@
     }
   }
 
-  function selectTowerType(type: "basic" | "sniper" | "splash" | "laser" | "freeze" | "missile") {
+  function selectTowerType(type: "basic" | "sniper" | "blast" | "laser" | "freeze" | "missile") {
     selectedTowerType = selectedTowerType === type ? null : type
+
+    // Hide "Buy & Place Towers" overlay when first tower is selected
+    if (showBuyPlaceTowers && selectedTowerType !== null) {
+      showBuyPlaceTowers = false
+    }
   }
 </script>
 
@@ -855,7 +1197,7 @@
 
   <div class="flex flex-col xl:flex-row gap-8 xl:h-[calc(100vh-200px)]">
     <!-- Game Canvas -->
-    <div class="flex-shrink-0">
+    <div class="flex-shrink-0 relative">
       <canvas
         bind:this={canvas}
         width={CANVAS_WIDTH}
@@ -865,16 +1207,35 @@
         onmousemove={handleCanvasMouseMove}
         onmouseleave={() => (hoveredCell = null)}
       ></canvas>
+
+      <!-- Subtle Countdown Timer (Top Right) -->
+      {#if countdown > 0}
+        <div class="absolute top-4 right-4 pointer-events-none">
+          <div class="bg-black bg-opacity-80 rounded-lg px-4 py-2 text-center border-2 border-blue-500">
+            <div class="text-sm text-blue-300 font-semibold mb-1">Wave starts in</div>
+            <div class="text-4xl font-bold text-white">{countdown}</div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Level Complete Celebration Overlay -->
+      {#if levelCompleted}
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div class="bg-gradient-to-br from-green-500 to-blue-500 bg-opacity-95 rounded-lg p-16 text-center shadow-2xl animate-pulse">
+            <div class="text-6xl mb-4">🎉</div>
+            <div class="text-5xl font-bold text-white mb-4">Level {level - 1} Complete!</div>
+            <div class="text-3xl text-white">Starting Level {level}...</div>
+            <div class="text-8xl mt-6">✨🎊✨</div>
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- Controls Panel -->
     <div class="flex-1 flex flex-col gap-4">
-      <div class="card bg-base-200 shadow-xl flex-1 xl:overflow-y-auto xl:max-h-full">
-        <div class="card-body">
-          <h2 class="card-title">Settings</h2>
-
-        <div class="space-y-4">
-          <!-- Stats -->
+      <!-- Stats Container -->
+      <div class="card bg-base-200 shadow-xl">
+        <div class="card-body p-4">
           <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
             <div class="stat py-2">
               <div class="stat-title text-xs">Health</div>
@@ -886,14 +1247,28 @@
             </div>
             <div class="stat py-2">
               <div class="stat-title text-xs">Wave</div>
-              <div class="stat-value text-2xl text-info">{wave}</div>
+              <div class="stat-value text-2xl text-info">
+                {wave}/{((level - 1) * wavesPerLevel) + wavesPerLevel}
+              </div>
+            </div>
+            <div class="stat py-2">
+              <div class="stat-title text-xs">Level</div>
+              <div class="stat-value text-2xl text-warning">{level}</div>
             </div>
             <div class="stat py-2">
               <div class="stat-title text-xs">Score</div>
               <div class="stat-value text-2xl">{score}</div>
             </div>
           </div>
+        </div>
+      </div>
 
+      <!-- Settings Container -->
+      <div class="card bg-base-200 shadow-xl flex-1 xl:overflow-y-auto xl:max-h-full">
+        <div class="card-body">
+          <h2 class="card-title">Settings</h2>
+
+        <div class="space-y-4">
           <!-- Enemy Speed Setting -->
           <div class="form-control">
             <label class="label">
@@ -930,6 +1305,14 @@
             <span class="label-text font-semibold">Options</span>
           </div>
 
+          <!-- Sound Effects Toggle -->
+          <div class="form-control">
+            <label class="label cursor-pointer">
+              <span class="label-text">Sound Effects</span>
+              <input type="checkbox" class="checkbox" bind:checked={soundEnabled} />
+            </label>
+          </div>
+
           <!-- Randomize Path Option -->
           <div class="form-control">
             <label class="label cursor-pointer">
@@ -943,6 +1326,14 @@
             <label class="label cursor-pointer">
               <span class="label-text">Second Enemy Entrance</span>
               <input type="checkbox" class="checkbox" bind:checked={secondEntrance} disabled={gameRunning} />
+            </label>
+          </div>
+
+          <!-- Air Attack Option -->
+          <div class="form-control">
+            <label class="label cursor-pointer">
+              <span class="label-text">Air Attack</span>
+              <input type="checkbox" class="checkbox" bind:checked={airAttackEnabled} disabled={gameRunning} />
             </label>
           </div>
 
@@ -964,56 +1355,41 @@
               </svg>
               <span>Game Over! Final Score: {score}</span>
             </div>
-          {:else if !gameRunning}
-            <div class="alert alert-info">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                class="stroke-current shrink-0 w-6 h-6"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-              <span>Click "Start Game" to begin!</span>
-            </div>
           {/if}
 
           <!-- Tower Selection -->
-          {#if gameRunning}
-            <div class="divider">Select Tower to Place</div>
-            <div class="grid grid-cols-1 gap-2">
-              {#each Object.entries(towerTypes).sort(([, a], [, b]) => a.cost - b.cost) as [key, tower]}
-                {@const quantity = towerQuantities[key as keyof typeof towerQuantities]}
-                {@const isOutOfStock = quantity !== 0 && quantity <= 0}
-                <button
-                  class="btn btn-block justify-start {selectedTowerType === key ? 'btn-active' : ''}"
-                  style="background-color: {tower.color}; border-color: {tower.color};"
-                  onclick={() => selectTowerType(key as "basic" | "sniper" | "splash" | "laser" | "freeze" | "missile")}
-                  disabled={money < tower.cost || isOutOfStock}
-                >
-                  <div class="flex justify-between w-full text-white">
-                    <span>{tower.name}</span>
-                    <div class="flex gap-2 items-center">
-                      <span>${tower.cost}</span>
-                      {#if quantity > 0}
-                        <span class="badge badge-sm">{quantity} left</span>
-                      {/if}
-                    </div>
+          <div class="divider">Select Tower to Place</div>
+          <div class="grid grid-cols-1 gap-2">
+            {#each Object.entries(towerTypes).sort(([, a], [, b]) => a.cost - b.cost) as [key, tower]}
+              {@const quantity = towerQuantities[key as keyof typeof towerQuantities]}
+              {@const isOutOfStock = quantity !== 0 && quantity <= 0}
+              {@const isSelected = selectedTowerType === key}
+              <button
+                class="btn btn-block justify-start text-left {isSelected ? 'btn-success' : ''}"
+                style="{isSelected ? 'background-color: #15803d; border-color: #15803d; color: white;' : `background-color: ${tower.color}; border-color: ${tower.color}; color: white;`}"
+                onclick={() => selectTowerType(key as "basic" | "sniper" | "blast" | "laser" | "freeze" | "missile")}
+                disabled={!gameRunning || money < tower.cost || isOutOfStock}
+              >
+                <div class="flex justify-between items-center w-full gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold">{tower.emoji} {tower.name}</span>
+                    <span class="text-xs opacity-90">- {tower.description}</span>
                   </div>
-                </button>
-              {/each}
-            </div>
+                  <div class="flex gap-2 items-center flex-shrink-0">
+                    <span>${tower.cost}</span>
+                    {#if quantity > 0}
+                      <span class="badge badge-sm">{quantity} left</span>
+                    {/if}
+                  </div>
+                </div>
+              </button>
+            {/each}
+          </div>
 
-            {#if selectedTowerType}
-              <div class="alert alert-warning">
-                <span>Click on the grid to place tower</span>
-              </div>
-            {/if}
+          {#if selectedTowerType}
+            <div class="alert alert-success">
+              <span>✓ Click on the grid to place tower</span>
+            </div>
           {/if}
 
           <!-- Instructions -->
@@ -1026,40 +1402,9 @@
               <li>Towers automatically shoot enemies in range</li>
               <li>Don't let enemies reach the end of the path</li>
               <li>Earn money by defeating enemies</li>
-              <li>Each wave gets progressively harder</li>
+              <li>Complete {wavesPerLevel} waves to advance a level</li>
+              <li>Enemy speed increases 25% each level</li>
             </ul>
-          </div>
-
-          <!-- Tower Info -->
-          <div class="divider"></div>
-          <div>
-            <h3 class="font-semibold mb-2">Tower Types:</h3>
-            <div class="space-y-1 text-sm">
-              <div>
-                <span class="font-bold text-blue-500">Basic:</span>
-                Balanced tower
-              </div>
-              <div>
-                <span class="font-bold text-purple-500">Sniper:</span>
-                Long range, high damage
-              </div>
-              <div>
-                <span class="font-bold text-orange-500">Splash:</span>
-                Area damage
-              </div>
-              <div>
-                <span class="font-bold text-cyan-400">Laser:</span>
-                15 burst, 1.5s reload
-              </div>
-              <div>
-                <span class="font-bold text-sky-500">Freeze:</span>
-                5s slow, bigger range
-              </div>
-              <div>
-                <span class="font-bold text-red-600">Missile:</span>
-                Fast, massive blast
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1077,9 +1422,11 @@
             <button class="btn btn-primary flex-1" onclick={startGame}>
               New Game
             </button>
-          {:else if wave === 0 || (enemies.length === 0 && enemiesSpawned >= 10 + (wave - 1) * 5)}
+          {:else if wave === 0 || (enemies.length === 0 && enemiesSpawned >= 5 + (wave - 1) * 3)}
+            {@const justCompletedLevel = wave > 0 && wave % wavesPerLevel === 0}
+            {@const nextLevel = level + 1}
             <button class="btn btn-success flex-1" onclick={startWave}>
-              Start Wave {wave + 1}
+              {justCompletedLevel ? `Start Level ${nextLevel}` : `Start Wave ${wave + 1}`}
             </button>
           {:else}
             <button class="btn btn-disabled flex-1" disabled>

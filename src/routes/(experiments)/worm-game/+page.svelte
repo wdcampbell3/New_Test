@@ -8,8 +8,8 @@
 
   // Game settings
   let gameSpeed = $state<"slow" | "normal" | "fast" | "insane">("normal")
-  let wallMode = $state<"solid" | "wraparound">("wraparound")
-  let gridSize = $state<"small" | "medium" | "large">("medium")
+  let wallMode = $state<"solid" | "wraparound">("solid")
+  let gridSize = $state<"small" | "medium" | "large">("small")
   let backgroundTheme = $state<"trippy" | "radial" | "deepspace">("trippy")
   let showGridDots = $state(false)
   let soundEnabled = $state(true)
@@ -238,7 +238,8 @@
     if (enabledPowerUps.binge) {
       for (let i = 0; i < 10; i++) weightedTypes.push("binge") // Most common
     }
-    if (enabledPowerUps.diet) {
+    if (enabledPowerUps.diet && worm.length > 1) {
+      // Only spawn diet pills if worm is longer than 1 square
       for (let i = 0; i < 4; i++) weightedTypes.push("diet") // Middle frequency
     }
     if (enabledPowerUps.turtle) {
@@ -315,18 +316,20 @@
         }, 5000)
         break
       case "diet":
-        // Never reduce to less than 1 square
-        const newLength = Math.max(1, Math.floor(worm.length / 2))
-        if (worm.length > 1) {
+        // Never reduce to less than 2 squares (since head was just added before this is called)
+        // If worm was originally 1 square, it's now 2 after adding head, so don't apply diet
+        if (worm.length > 2) {
+          const newLength = Math.max(2, Math.floor(worm.length / 2))
           worm = worm.slice(0, newLength)
+          if (soundEnabled) playPowerUpSound()
         }
-        if (soundEnabled) playPowerUpSound()
+        // If worm is 2 or fewer segments (was 1 originally), diet has no effect
         break
       case "binge":
-        // Add 3 more food items
+        // Add 5 more food items
         const width = getGridWidth()
         const height = getGridHeight()
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 5; i++) {
           let newFood: Position
           let attempts = 0
           do {
@@ -379,9 +382,9 @@
         }, 5000)
         break
       case "cow":
-        // Grow by exactly 3 squares
+        // Grow by exactly 5 squares
         const cowTail = worm[worm.length - 1]
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 5; i++) {
           worm.push({ ...cowTail })
         }
         if (soundEnabled) playPowerUpSound()
@@ -412,9 +415,11 @@
 
     const width = getGridWidth()
     const height = getGridHeight()
+    const now = Date.now()
 
-    // Handle walls based on mode
-    if (wallMode === "solid") {
+    // Handle walls based on mode (invincible worms always wrap around)
+    if (wallMode === "solid" && invincibleUntil < now) {
+      // Solid walls only apply when NOT invincible
       if (
         newHead.x < 0 ||
         newHead.x >= width ||
@@ -425,12 +430,12 @@
         return
       }
     } else {
+      // Wraparound mode OR invincible - always wrap
       newHead.x = (newHead.x + width) % width
       newHead.y = (newHead.y + height) % height
     }
 
     // Check self collision (unless invincible)
-    const now = Date.now()
     if (invincibleUntil < now) {
       if (
         worm.some((segment) => segment.x === newHead.x && segment.y === newHead.y)
@@ -660,7 +665,7 @@
               display: grid;
               grid-template-columns: repeat({getGridWidth()}, {getCellSize()}px);
               grid-template-rows: repeat({getGridHeight()}, {getCellSize()}px);
-              gap: 1px;
+              gap: 0px;
               background: {getBackgroundStyle()};
               border: 3px solid #374151;
               border-radius: 8px;
@@ -840,6 +845,14 @@
               </label>
             </div>
 
+            <!-- Sound Effects Toggle -->
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Sound Effects</span>
+                <input type="checkbox" class="checkbox" bind:checked={soundEnabled} />
+              </label>
+            </div>
+
             <!-- Power-Ups Toggle -->
             <div class="form-control">
               <label class="label cursor-pointer">
@@ -894,7 +907,7 @@
                     />
                     <div class="flex flex-col">
                       <span class="label-text text-sm font-medium">🍪 Binge</span>
-                      <span class="label-text text-xs opacity-70">Add 3 extra food items</span>
+                      <span class="label-text text-xs opacity-70">Add 5 extra food items</span>
                     </div>
                   </label>
                   <label class="label cursor-pointer justify-start gap-2 py-1">
@@ -952,21 +965,12 @@
                     />
                     <div class="flex flex-col">
                       <span class="label-text text-sm font-medium">🐮 Cow</span>
-                      <span class="label-text text-xs opacity-70">Grow by exactly 3 squares</span>
+                      <span class="label-text text-xs opacity-70">Grow by exactly 5 squares</span>
                     </div>
                   </label>
                 </div>
               </div>
             {/if}
-
-            <!-- Sound Toggle -->
-            <div class="divider my-2"></div>
-            <div class="form-control">
-              <label class="label cursor-pointer">
-                <span class="label-text">Sound Effects</span>
-                <input type="checkbox" class="checkbox" bind:checked={soundEnabled} />
-              </label>
-            </div>
 
             <!-- Instructions -->
             <div class="divider"></div>

@@ -59,6 +59,9 @@
   let activePowerUps = $state<PowerUp[]>([])
   let lastPowerUpSpawn = $state(0)
 
+  // AI throttling
+  let lastAIDecision = $state(0)
+
   // Canvas settings
   const CANVAS_WIDTH = 800
   const CANVAS_HEIGHT = 600
@@ -226,7 +229,27 @@
     if (vsMode !== "computer") return
 
     const now = Date.now()
+
+    // Throttle AI decisions based on skill level
+    // Amateur makes slower decisions, Expert makes faster decisions
+    let decisionInterval: number
+    if (computerSkill === "amateur") {
+      decisionInterval = 200 // 5 decisions per second
+    } else if (computerSkill === "normal") {
+      decisionInterval = 120 // ~8.3 decisions per second
+    } else {
+      decisionInterval = 80 // 12.5 decisions per second
+    }
+
+    // Only make a new decision if enough time has passed
+    if (now - lastAIDecision < decisionInterval) {
+      return
+    }
+
+    lastAIDecision = now
+
     const isDasherActive = player1.trailDasherUntil > now || player2.trailDasherUntil > now
+    const hasShield = player2.shieldUntil > now
 
     // Skill settings
     let lookaheadDistances: number[]
@@ -237,53 +260,57 @@
     if (computerSkill === "amateur") {
       // Amateur: shorter lookahead, turns more randomly, less planning
       lookaheadDistances = isDasherActive ? [20, 40] : [20, 40, 60]
-      randomTurnChance = isDasherActive ? 0.02 : 0.03
+      randomTurnChance = isDasherActive ? 0.015 : 0.02
       maxDistance = isDasherActive ? 80 : 100
-      turnThreshold = 40 // Only turn if danger is close
+      turnThreshold = 50 // Only turn if danger is fairly close
     } else if (computerSkill === "normal") {
-      // Normal: moderate lookahead and planning
-      lookaheadDistances = isDasherActive ? [20, 40, 60] : [20, 40, 60, 80]
-      randomTurnChance = isDasherActive ? 0.01 : 0.015
-      maxDistance = isDasherActive ? 100 : 120
-      turnThreshold = 60
-    } else {
-      // Expert: longest lookahead, best planning, fewest random turns
+      // Normal: good lookahead, balanced planning
       lookaheadDistances = isDasherActive ? [20, 40, 60] : [20, 40, 60, 80, 100]
       randomTurnChance = isDasherActive ? 0.005 : 0.01
-      maxDistance = isDasherActive ? 120 : 150
-      turnThreshold = 80
+      maxDistance = isDasherActive ? 120 : 140
+      turnThreshold = 70 // Turns when danger is moderate distance
+    } else {
+      // Expert: longest lookahead, excellent planning, very few random turns
+      lookaheadDistances = isDasherActive ? [20, 40, 60, 80] : [20, 40, 60, 80, 100, 120]
+      randomTurnChance = isDasherActive ? 0.002 : 0.005
+      maxDistance = isDasherActive ? 140 : 180
+      turnThreshold = 90 // Plans far ahead
     }
 
-    // Evaluate current direction safety
+    // Evaluate current direction safety (skip if shielded - AI can pass through trails)
     let dangerAhead = false
     let closestDanger = Infinity
-    for (const distance of lookaheadDistances) {
-      let nextX = player2.x
-      let nextY = player2.y
 
-      switch (player2.direction) {
-        case "up":
-          nextY -= distance
-          break
-        case "down":
-          nextY += distance
-          break
-        case "left":
-          nextX -= distance
-          break
-        case "right":
-          nextX += distance
-          break
-      }
+    if (!hasShield) {
+      // Only check for danger if not shielded
+      for (const distance of lookaheadDistances) {
+        let nextX = player2.x
+        let nextY = player2.y
 
-      // Wrap coordinates for checking
-      nextX = (nextX + CANVAS_WIDTH) % CANVAS_WIDTH
-      nextY = (nextY + CANVAS_HEIGHT) % CANVAS_HEIGHT
+        switch (player2.direction) {
+          case "up":
+            nextY -= distance
+            break
+          case "down":
+            nextY += distance
+            break
+          case "left":
+            nextX -= distance
+            break
+          case "right":
+            nextX += distance
+            break
+        }
 
-      if (checkCollisionAtPoint(nextX, nextY, player2)) {
-        dangerAhead = true
-        closestDanger = Math.min(closestDanger, distance)
-        break
+        // Wrap coordinates for checking
+        nextX = (nextX + CANVAS_WIDTH) % CANVAS_WIDTH
+        nextY = (nextY + CANVAS_HEIGHT) % CANVAS_HEIGHT
+
+        if (checkCollisionAtPoint(nextX, nextY, player2)) {
+          dangerAhead = true
+          closestDanger = Math.min(closestDanger, distance)
+          break
+        }
       }
     }
 
@@ -305,10 +332,16 @@
       }
     })
 
-    // Only consider turning if danger is within threshold, random chance, or pursuing power-up
-    const shouldConsiderTurning = (dangerAhead && closestDanger <= turnThreshold) || Math.random() < randomTurnChance || nearestPowerUp !== null
+    // Only consider turning if danger is within threshold, random chance, pursuing power-up, or has shield
+    // When shielded, AI should turn more often to use invincibility strategically
+    const shieldTurnChance = hasShield ? 0.3 : 0 // 30% chance to turn when shielded
+    const shouldConsiderTurning =
+      (dangerAhead && closestDanger <= turnThreshold) ||
+      Math.random() < (randomTurnChance + shieldTurnChance) ||
+      nearestPowerUp !== null ||
+      hasShield // Always evaluate directions when shielded
 
-    // If danger ahead, occasional random turn, or power-up nearby, consider turning
+    // If danger ahead, occasional random turn, power-up nearby, or shielded, consider turning
     if (shouldConsiderTurning) {
       const possibleDirections: Direction[] = ["up", "down", "left", "right"]
 
@@ -344,14 +377,32 @@
           testX = (testX + CANVAS_WIDTH) % CANVAS_WIDTH
           testY = (testY + CANVAS_HEIGHT) % CANVAS_HEIGHT
 
-          if (checkCollisionAtPoint(testX, testY, player2)) {
+          // If shielded, ignore collisions - all directions are safe
+          if (!hasShield && checkCollisionAtPoint(testX, testY, player2)) {
             break
           }
           score += 1 // Each safe distance increment adds to score
         }
 
-        // Bonus for moving toward power-up
-        if (nearestPowerUp && !dangerAhead) {
+        // When shielded, add bonus for directions that will box in opponent or create strategic position
+        if (hasShield) {
+          // Prefer perpendicular turns to create more trail coverage
+          if (
+            (player2.direction === "up" || player2.direction === "down") &&
+            (dir === "left" || dir === "right")
+          ) {
+            score += 3 // Bonus for turning perpendicular
+          } else if (
+            (player2.direction === "left" || player2.direction === "right") &&
+            (dir === "up" || dir === "down")
+          ) {
+            score += 3 // Bonus for turning perpendicular
+          }
+        }
+
+        // Bonus for moving toward power-up (only if direction is reasonably safe)
+        if (nearestPowerUp && !dangerAhead && score > 3) {
+          // Only consider power-up if this direction has decent safety (score > 3)
           const currentDx = nearestPowerUp.x - player2.x
           const currentDy = nearestPowerUp.y - player2.y
 
@@ -378,9 +429,10 @@
           const currentDistance = Math.sqrt(currentDx * currentDx + currentDy * currentDy)
           const futureDistance = Math.sqrt(futureDx * futureDx + futureDy * futureDy)
 
-          // If this direction gets us closer to the power-up, add bonus
+          // If this direction gets us closer to the power-up, add modest bonus
+          // Reduced from 20 to 5 so safety is prioritized over power-up pursuit
           if (futureDistance < currentDistance) {
-            score += 20 // Power-up pursuit bonus
+            score += 5 // Power-up pursuit bonus (modest, not overwhelming)
           }
         }
 
@@ -1322,6 +1374,7 @@
     // Clear active power-ups and flash state
     activePowerUps = []
     lastPowerUpSpawn = 0
+    lastAIDecision = 0 // Reset AI decision timer
     flashActive = false
     flashCount = 0
     if (flashTimeoutId !== null) {

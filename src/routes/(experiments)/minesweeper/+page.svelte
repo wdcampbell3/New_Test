@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte"
 
-  type PowerUpType = "xray" | "detector" | "laser"
+  type PowerUpType = "xray" | "detector" | "laser" | "bomb"
   type TrapType = "subterfuge" | "sabotage"
 
   type Cell = {
@@ -17,9 +17,9 @@
   type Difficulty = "easy" | "medium" | "hard"
 
   const DIFFICULTIES = {
-    easy: { rows: 15, cols: 15, mines: 30 },
-    medium: { rows: 20, cols: 20, mines: 70 },
-    hard: { rows: 25, cols: 25, mines: 120 },
+    easy: { rows: 15, cols: 15, mines: 25 },
+    medium: { rows: 20, cols: 20, mines: 50 },
+    hard: { rows: 25, cols: 25, mines: 100 },
   }
 
   const BOARD_SIZE = 700 // Fixed board size in pixels
@@ -43,12 +43,17 @@
   let laserChargedCell: { row: number; col: number } | null = $state(null)
   let laserChargedTimeLeft = $state(0)
   let activeXrayCell: { row: number; col: number } | null = $state(null)
+  let bombActive = $state(false)
+  let bombTimeLeft = $state(0)
+  let bombActivatedCell: { row: number; col: number } | null = $state(null)
+  let hoveringCell: { row: number; col: number } | null = $state(null)
 
   // Power-up/trap settings
   let powerUpsEnabled = $state({
     xray: true,
     detector: true,
     laser: true,
+    bomb: true,
   })
 
   let trapsEnabled = $state({
@@ -215,6 +220,14 @@
         grid[row][col].powerUp = "laser"
       }
     }
+    // Bomb detonator: 1 on easy, 2 on medium, 3 on hard
+    if (powerUpsEnabled.bomb) {
+      const bombQuantity = difficulty === "easy" ? 1 : difficulty === "medium" ? 2 : 3
+      for (let i = 0; i < bombQuantity && index < zeroCells.length; i++) {
+        const { row, col } = zeroCells[index++]
+        grid[row][col].powerUp = "bomb"
+      }
+    }
 
     // Place traps (quantity of each enabled)
     if (trapsEnabled.subterfuge) {
@@ -264,6 +277,48 @@
         }
       }, 100)
 
+      lastClickTime = 0
+      lastClickCell = null
+      return
+    }
+
+    // Check if bomb is active and user is clicking an unrevealed cell to drop it
+    if (bombActive && !cell.isRevealed && !cell.isFlagged) {
+      // Clear any pending single-click timer
+      if (singleClickTimer) {
+        clearTimeout(singleClickTimer)
+        singleClickTimer = null
+      }
+
+      // Drop bomb and reveal 3x3 grid, flagging any mines
+      const config = DIFFICULTIES[difficulty]
+      bombActive = false
+      bombTimeLeft = 0
+      bombActivatedCell = null
+
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const nr = row + dr
+          const nc = col + dc
+          if (nr >= 0 && nr < config.rows && nc >= 0 && nc < config.cols) {
+            const neighborCell = grid[nr][nc]
+            if (!neighborCell.isRevealed) {
+              if (neighborCell.isMine) {
+                // Auto-flag mines in blast radius
+                if (!neighborCell.isFlagged) {
+                  neighborCell.isFlagged = true
+                  minesRemaining--
+                }
+              } else {
+                // Reveal non-mine cells
+                neighborCell.isRevealed = true
+              }
+            }
+          }
+        }
+      }
+
+      checkWin()
       lastClickTime = 0
       lastClickCell = null
       return
@@ -526,6 +581,23 @@
           grid[row][col].powerUp = null
         }
       }, 100)
+    } else if (type === "bomb") {
+      bombActive = true
+      bombTimeLeft = 2.5
+      bombActivatedCell = { row, col }
+      const interval = setInterval(() => {
+        bombTimeLeft -= 0.1
+        if (bombTimeLeft <= 0) {
+          bombActive = false
+          bombTimeLeft = 0
+          bombActivatedCell = null
+          clearInterval(interval)
+          // Remove the power-up icon after timer completes
+          const cellKey = `${row},${col}`
+          blinkingCells.delete(cellKey)
+          grid[row][col].powerUp = null
+        }
+      }, 100)
     }
   }
 
@@ -684,6 +756,18 @@
     laserChargedTimeLeft = 0
   }
 
+  function handleArrowClick(e: MouseEvent, dr: number, dc: number) {
+    if (!laserChargedCell) return
+    if (gameStatus !== "playing") return
+
+    e.stopPropagation() // Prevent the cell click handler from firing
+
+    const { row, col } = laserChargedCell
+    fireLaser(row, col, dr, dc)
+    laserChargedCell = null
+    laserChargedTimeLeft = 0
+  }
+
   function fireLaser(startRow: number, startCol: number, dr: number, dc: number) {
     const config = DIFFICULTIES[difficulty]
     let r = startRow + dr
@@ -714,6 +798,7 @@
 
   function handleCellMouseOver(row: number, col: number) {
     activeXrayCell = { row, col }
+    hoveringCell = { row, col }
   }
 
   function revealAllMines() {
@@ -780,6 +865,7 @@
       if (cell.powerUp === "xray") return "🔍"
       if (cell.powerUp === "detector") return "📡"
       if (cell.powerUp === "laser") return "🔫"
+      if (cell.powerUp === "bomb") return "💥"
     }
     if (cell.trap && !spawnedTraps.has(cellKey)) {
       if (cell.trap === "subterfuge") return "🎭"
@@ -872,6 +958,24 @@
                   </svg>
                 {/if}
 
+                <!-- Bomb Circular Countdown -->
+                {#if bombActivatedCell && bombActivatedCell.row === rowIndex && bombActivatedCell.col === colIndex && bombTimeLeft > 0}
+                  <svg class="absolute inset-0" viewBox="0 0 100 100" style="transform: rotate(-90deg)">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#fb923c" stroke-width="10" opacity="0.3" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="#f97316"
+                      stroke-width="10"
+                      stroke-dasharray="282.74"
+                      stroke-dashoffset="{282.74 * (1 - bombTimeLeft / 2.5)}"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                {/if}
+
                 <!-- Laser Charged Circular Countdown -->
                 {#if laserChargedCell && laserChargedCell.row === rowIndex && laserChargedCell.col === colIndex}
                   <svg class="absolute inset-0" viewBox="0 0 100 100" style="transform: rotate(-90deg)">
@@ -894,27 +998,68 @@
                 {#if laserChargedCell}
                   <!-- Up arrow -->
                   {#if laserChargedCell.row === rowIndex + 1 && laserChargedCell.col === colIndex}
-                    <div class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold pointer-events-none">
+                    <div
+                      class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold cursor-pointer hover:scale-125 transition-transform"
+                      onclick={(e) => handleArrowClick(e, -1, 0)}
+                      role="button"
+                      tabindex="0"
+                    >
                       ⬆
                     </div>
                   {/if}
                   <!-- Down arrow -->
                   {#if laserChargedCell.row === rowIndex - 1 && laserChargedCell.col === colIndex}
-                    <div class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold pointer-events-none">
+                    <div
+                      class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold cursor-pointer hover:scale-125 transition-transform"
+                      onclick={(e) => handleArrowClick(e, 1, 0)}
+                      role="button"
+                      tabindex="0"
+                    >
                       ⬇
                     </div>
                   {/if}
                   <!-- Left arrow -->
                   {#if laserChargedCell.row === rowIndex && laserChargedCell.col === colIndex + 1}
-                    <div class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold pointer-events-none">
+                    <div
+                      class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold cursor-pointer hover:scale-125 transition-transform"
+                      onclick={(e) => handleArrowClick(e, 0, -1)}
+                      role="button"
+                      tabindex="0"
+                    >
                       ⬅
                     </div>
                   {/if}
                   <!-- Right arrow -->
                   {#if laserChargedCell.row === rowIndex && laserChargedCell.col === colIndex - 1}
-                    <div class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold pointer-events-none">
+                    <div
+                      class="absolute inset-0 flex items-center justify-center text-yellow-500 text-2xl font-bold cursor-pointer hover:scale-125 transition-transform"
+                      onclick={(e) => handleArrowClick(e, 0, 1)}
+                      role="button"
+                      tabindex="0"
+                    >
                       ➡
                     </div>
+                  {/if}
+                {/if}
+
+                <!-- Target indicator when laser is active and hovering -->
+                {#if laserActive && hoveringCell && hoveringCell.row === rowIndex && hoveringCell.col === colIndex && !cell.isRevealed && !cell.isFlagged}
+                  <div class="absolute inset-0 flex items-center justify-center text-3xl font-bold pointer-events-none" style="opacity: 0.8;">
+                    🎯
+                  </div>
+                {/if}
+
+                <!-- Target indicator when bomb is active and hovering -->
+                {#if bombActive && hoveringCell && hoveringCell.row === rowIndex && hoveringCell.col === colIndex && !cell.isRevealed && !cell.isFlagged}
+                  <div class="absolute inset-0 flex items-center justify-center text-3xl font-bold pointer-events-none" style="opacity: 0.8;">
+                    🎯
+                  </div>
+                {/if}
+
+                <!-- 3x3 blast radius overlay when bomb is active and hovering -->
+                {#if bombActive && hoveringCell}
+                  {#if Math.abs(hoveringCell.row - rowIndex) <= 1 && Math.abs(hoveringCell.col - colIndex) <= 1}
+                    <div class="absolute inset-0 bg-orange-500/20 border border-orange-500/50 pointer-events-none"></div>
                   {/if}
                 {/if}
               </button>
@@ -990,9 +1135,9 @@
                 bind:value={difficulty}
                 onchange={initGame}
               >
-                <option value="easy">Easy (15×15, 30 mines)</option>
-                <option value="medium">Medium (20×20, 70 mines)</option>
-                <option value="hard">Hard (25×25, 120 mines)</option>
+                <option value="easy">Easy (15×15, 25 mines)</option>
+                <option value="medium">Medium (20×20, 50 mines)</option>
+                <option value="hard">Hard (25×25, 100 mines)</option>
               </select>
             </div>
 
@@ -1033,6 +1178,18 @@
                   type="checkbox"
                   class="checkbox checkbox-sm"
                   bind:checked={powerUpsEnabled.laser}
+                  disabled={gameStatus === "playing"}
+                />
+              </label>
+            </div>
+
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">💥 Bomb (reveals 3x3, auto-flags mines)</span>
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  bind:checked={powerUpsEnabled.bomb}
                   disabled={gameStatus === "playing"}
                 />
               </label>

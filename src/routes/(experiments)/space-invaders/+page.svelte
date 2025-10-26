@@ -65,7 +65,7 @@
   let alienBulletSpeed = $state(4)
 
   // Power-ups
-  type PowerUpType = "rapidfire" | "shield" | "spreadshot" | "laser"
+  type PowerUpType = "rapidfire" | "shield" | "spreadshot" | "laser" | "star" | "missile"
   type PowerUp = {
     x: number
     y: number
@@ -77,6 +77,13 @@
   let powerUps = $state<PowerUp[]>([])
   let activePowerUp = $state<PowerUpType | null>(null)
   let powerUpTimeLeft = $state(0)
+
+  // Laser beam state
+  let laserBeamActive = $state(false)
+  let laserBeamTimeLeft = $state(0)
+
+  // Missile state
+  let missileAvailable = $state(0)
 
   // UFO
   let ufo = $state<{ x: number; y: number; width: number; height: number; active: boolean } | null>(null)
@@ -127,6 +134,7 @@
     left: false,
     right: false,
     space: false,
+    m: false,
   }
 
   let lastShot = 0
@@ -201,12 +209,17 @@
       e.preventDefault()
       keys.space = true
     }
+    if (e.key === "m" || e.key === "M") {
+      e.preventDefault()
+      keys.m = true
+    }
   }
 
   function handleKeyUp(e: KeyboardEvent) {
     if (e.key === "ArrowLeft") keys.left = false
     if (e.key === "ArrowRight") keys.right = false
     if (e.key === " ") keys.space = false
+    if (e.key === "m" || e.key === "M") keys.m = false
   }
 
   function getDifficultyMultiplier(): { speed: number; fireRate: number; health: number } {
@@ -236,6 +249,9 @@
     powerUps = []
     activePowerUp = null
     powerUpTimeLeft = 0
+    laserBeamActive = false
+    laserBeamTimeLeft = 0
+    missileAvailable = 0
     ufo = null
     lastUfoSpawn = Date.now()
     particles = []
@@ -446,14 +462,19 @@
           fromPowerUp: "spreadshot",
         })
       } else if (activePowerUp === "laser") {
-        // Wide laser beam
-        bullets.push({
-          x: player.x + player.width / 2 - 10,
-          y: player.y,
-          width: 20,
-          height: 15,
-          fromPowerUp: "laser",
-        })
+        // Activate laser beam for 3 seconds
+        laserBeamActive = true
+        laserBeamTimeLeft = 3
+        const interval = setInterval(() => {
+          laserBeamTimeLeft -= 0.1
+          if (laserBeamTimeLeft <= 0) {
+            laserBeamActive = false
+            laserBeamTimeLeft = 0
+            clearInterval(interval)
+          }
+        }, 100)
+        if (soundEnabled) playShootSound()
+        return // Don't set lastShot for laser
       } else {
         // Normal bullet
         bullets.push({
@@ -467,6 +488,73 @@
       lastShot = now
       if (soundEnabled) playShootSound()
     }
+  }
+
+  function fireMissile() {
+    if (missileAvailable <= 0) return
+
+    // Find closest alien to player
+    const aliveAliens = aliens.filter((a) => a.alive)
+    if (aliveAliens.length === 0) return
+
+    let closestAlien = aliveAliens[0]
+    let minDistance = Math.hypot(
+      closestAlien.x + closestAlien.width / 2 - (player.x + player.width / 2),
+      closestAlien.y + closestAlien.height / 2 - player.y
+    )
+
+    for (let alien of aliveAliens) {
+      const distance = Math.hypot(
+        alien.x + alien.width / 2 - (player.x + player.width / 2),
+        alien.y + alien.height / 2 - player.y
+      )
+      if (distance < minDistance) {
+        minDistance = distance
+        closestAlien = alien
+      }
+    }
+
+    // Destroy the target alien and adjacent aliens
+    const targetX = closestAlien.x + closestAlien.width / 2
+    const targetY = closestAlien.y + closestAlien.height / 2
+    const explosionRadius = 60 // Radius to find adjacent aliens
+
+    let totalPoints = 0
+    let aliensDestroyed = 0
+
+    for (let alien of aliens) {
+      if (!alien.alive) continue
+
+      const alienCenterX = alien.x + alien.width / 2
+      const alienCenterY = alien.y + alien.height / 2
+      const distance = Math.hypot(alienCenterX - targetX, alienCenterY - targetY)
+
+      if (distance <= explosionRadius) {
+        alien.alive = false
+        totalPoints += alien.points
+        aliensDestroyed++
+        createExplosion(alienCenterX, alienCenterY, alien.color)
+        dropPowerUp(alien.x, alien.y)
+      }
+    }
+
+    // Update score and combo
+    if (aliensDestroyed > 0) {
+      score += totalPoints
+      combo += aliensDestroyed
+      maxCombo = Math.max(maxCombo, combo)
+
+      // Big explosion at target
+      createExplosion(targetX, targetY, "#ff8800")
+      createExplosion(targetX, targetY, "#ffff00")
+
+      // Score popup
+      addScorePopup(targetX, targetY, totalPoints, "#ff8800")
+
+      if (soundEnabled) playExplosionSound()
+    }
+
+    missileAvailable--
   }
 
   function alienShoot() {
@@ -506,8 +594,8 @@
 
   function dropPowerUp(x: number, y: number) {
     if (Math.random() < 0.15) { // 15% chance
-      const types: PowerUpType[] = ["rapidfire", "shield", "spreadshot", "laser"]
-      const emojis = { rapidfire: "⚡", shield: "🛡️", spreadshot: "💥", laser: "🔫" }
+      const types: PowerUpType[] = ["rapidfire", "shield", "spreadshot", "laser", "star", "missile"]
+      const emojis = { rapidfire: "⚡", shield: "🛡️", spreadshot: "💥", laser: "🔫", star: "⭐", missile: "🚀" }
       const type = types[Math.floor(Math.random() * types.length)]
 
       powerUps.push({
@@ -522,8 +610,21 @@
   }
 
   function activatePowerUpEffect(type: PowerUpType) {
+    if (type === "missile") {
+      // Missile is instant use, give one missile
+      missileAvailable++
+      return
+    }
+
     activePowerUp = type
-    powerUpTimeLeft = 10 // 10 seconds
+
+    if (type === "star") {
+      // Star invincibility lasts 5 seconds
+      powerUpTimeLeft = 5
+      player.invincibleUntil = Date.now() + 5000
+    } else {
+      powerUpTimeLeft = 10 // 10 seconds for other power-ups
+    }
 
     if (type === "rapidfire") {
       shootCooldown = BASE_SHOOT_COOLDOWN / 3
@@ -598,6 +699,10 @@
     }
     if (keys.space) {
       shoot()
+    }
+    if (keys.m) {
+      fireMissile()
+      keys.m = false // Only fire once per press
     }
 
     // Move bullets
@@ -709,6 +814,52 @@
 
       return true
     })
+
+    // Check laser beam collisions (continuous damage while active)
+    if (laserBeamActive) {
+      const laserBeam = {
+        x: player.x + player.width / 2 - 2,
+        y: 0,
+        width: 4,
+        height: player.y,
+      }
+
+      for (let alien of aliens) {
+        if (alien.alive && checkCollision(laserBeam, alien)) {
+          alien.health--
+
+          if (alien.health <= 0) {
+            alien.alive = false
+            score += alien.points
+            combo++
+            maxCombo = Math.max(maxCombo, combo)
+
+            // Combo bonus
+            if (combo > 5) {
+              const bonus = combo * 2
+              score += bonus
+              addScorePopup(alien.x + alien.width / 2, alien.y, alien.points + bonus, "#ffff00")
+            } else {
+              addScorePopup(alien.x + alien.width / 2, alien.y, alien.points, alien.color)
+            }
+
+            createExplosion(alien.x + alien.width / 2, alien.y + alien.height / 2, alien.color)
+            dropPowerUp(alien.x, alien.y)
+            if (soundEnabled) playExplosionSound()
+          }
+        }
+      }
+
+      // Check laser-UFO collision
+      if (ufo && checkCollision(laserBeam, ufo)) {
+        const ufoPoints = 100
+        score += ufoPoints
+        addScorePopup(ufo.x + ufo.width / 2, ufo.y, ufoPoints, "#ff00ff")
+        createExplosion(ufo.x + ufo.width / 2, ufo.y + ufo.height / 2, "#ff00ff")
+        ufo = null
+        if (soundEnabled) playExplosionSound()
+      }
+    }
 
     // Check if player missed
     if (bullets.length === 0 && lastShot > 0) {
@@ -935,14 +1086,23 @@
 
     // Draw bullets
     for (let bullet of bullets) {
-      if (bullet.fromPowerUp === "laser") {
-        ctx.fillStyle = "#ff0000"
-      } else if (bullet.fromPowerUp === "spreadshot") {
+      if (bullet.fromPowerUp === "spreadshot") {
         ctx.fillStyle = "#00ffff"
       } else {
         ctx.fillStyle = "#ffffff"
       }
       ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height)
+    }
+
+    // Draw laser beam
+    if (laserBeamActive) {
+      ctx.fillStyle = "#ff0000"
+      ctx.fillRect(player.x + player.width / 2 - 2, 0, 4, player.y)
+      // Add glow effect
+      ctx.shadowBlur = 20
+      ctx.shadowColor = "#ff0000"
+      ctx.fillRect(player.x + player.width / 2 - 2, 0, 4, player.y)
+      ctx.shadowBlur = 0
     }
 
     // Draw alien bullets
@@ -1058,11 +1218,21 @@
         shield: "🛡️ Shield",
         spreadshot: "💥 Spread Shot",
         laser: "🔫 Laser",
+        star: "⭐ Invincible",
+        missile: "🚀 Missile",
       }
       ctx.fillStyle = "#00ffff"
       ctx.font = "16px monospace"
       ctx.textAlign = "right"
       ctx.fillText(`${powerUpNames[activePowerUp]}: ${powerUpTimeLeft.toFixed(1)}s`, CANVAS_WIDTH - 20, 55)
+    }
+
+    // Draw missile counter
+    if (missileAvailable > 0) {
+      ctx.fillStyle = "#ffaa00"
+      ctx.font = "16px monospace"
+      ctx.textAlign = "left"
+      ctx.fillText(`🚀 Missiles: ${missileAvailable}`, 20, 80)
     }
 
     // Draw level transition
@@ -1121,6 +1291,9 @@
     powerUps = []
     activePowerUp = null
     powerUpTimeLeft = 0
+    laserBeamActive = false
+    laserBeamTimeLeft = 0
+    missileAvailable = 0
     particles = []
     scorePopups = []
     player.x = 375
@@ -1261,8 +1434,15 @@
                   {activePowerUp === "shield" ? "🛡️ Shield" : ""}
                   {activePowerUp === "spreadshot" ? "💥 Spread Shot" : ""}
                   {activePowerUp === "laser" ? "🔫 Laser" : ""}
+                  {activePowerUp === "star" ? "⭐ Invincible" : ""}
                   - {powerUpTimeLeft.toFixed(1)}s
                 </span>
+              </div>
+            {/if}
+
+            {#if missileAvailable > 0}
+              <div class="alert alert-warning">
+                <span class="font-bold">🚀 Missiles: {missileAvailable} (Press M)</span>
               </div>
             {/if}
 
@@ -1314,6 +1494,7 @@
                   <kbd class="kbd kbd-sm">→</kbd> to move
                 </li>
                 <li>Press <kbd class="kbd kbd-sm">SPACE</kbd> to shoot</li>
+                <li>Press <kbd class="kbd kbd-sm">M</kbd> to fire missile</li>
                 <li>Destroy all aliens to advance levels</li>
                 <li>Avoid alien bullets and use shields</li>
                 <li>Collect power-ups for special abilities</li>
@@ -1330,7 +1511,9 @@
                 <li>⚡ Rapid Fire - Shoot 3x faster</li>
                 <li>🛡️ Shield - Invincible for 10s</li>
                 <li>💥 Spread Shot - Fire 3 bullets</li>
-                <li>🔫 Laser - Wide powerful beam</li>
+                <li>🔫 Laser - 3s red beam (continuous damage)</li>
+                <li>⭐ Star - Invincible for 5s</li>
+                <li>🚀 Missile - Destroy alien + adjacent (Press M)</li>
               </ul>
             </div>
 
