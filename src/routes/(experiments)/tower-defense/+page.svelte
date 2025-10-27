@@ -53,14 +53,111 @@
   const CANVAS_WIDTH = GRID_WIDTH * GRID_SIZE
   const CANVAS_HEIGHT = GRID_HEIGHT * GRID_SIZE
 
+  // ============================================================
+  // 🎮 GAME BALANCE CONFIGURATION - TWEAK THESE VALUES EASILY
+  // ============================================================
+  const DEFAULT_CONFIG = {
+    // 💰 Economy Settings
+    startingMoney: 200,
+    startingHealth: 20,
+    levelCompletionBonus: 100, // Extra money for beating a level
+    keepMoneyBetweenLevels: false, // Set to true to not reset money
+
+    // 🌊 Wave & Level Progression
+    wavesPerLevel: 5,
+    baseEnemyCount: 5, // Starting count for wave 1
+    enemyCountPerWave: 3, // Add this many enemies per wave (5 + wave * 3)
+
+    // ⏱️ Spawn Timing
+    baseSpawnInterval: 1500, // ms between enemy spawns on wave 1
+    spawnIntervalDecrease: 100, // Decrease by this much per wave
+    minSpawnInterval: 1000, // Never spawn faster than this
+
+    // 👾 Enemy Difficulty Scaling
+    enemyHealthPerWave: 0.2, // Multiply by (1 + (wave-1) * THIS) - 0.2 = 20% per wave
+    enemySpeedPerLevel: 0.15, // Multiply by THIS per level - use 0.10 for additive, 1.15 for multiplicative
+    enemySpeedScalingType: "multiplicative", // "additive" or "multiplicative"
+
+    // 👾 Enemy Base Speeds
+    baseEnemySpeed: 2.2, // Basic enemy speed
+    fastEnemySpeed: 4.4, // Fast enemy speed
+    tankEnemySpeed: 1.1, // Tank enemy speed
+
+    // 🎲 Enemy Spawn Probabilities (must add up to 1.0)
+    enemySpawnWeights: {
+      basic: 0.6, // 60% chance
+      fast: 0.3,  // 30% chance
+      tank: 0.1,  // 10% chance
+    },
+
+    // 🏰 Tower Quantities Per Level
+    towerQuantities: {
+      basic: 5,
+      sniper: 2,
+      blast: 4,
+      laser: 2,
+      freeze: 3,
+      missile: 1,
+    },
+
+    // 🗼 Tower Persistence
+    clearTowersBetweenLevels: true, // Set to false to keep towers between levels
+
+    // 🗼 Tower Power Multipliers
+    towerDamageMultiplier: 1.0, // Multiply all tower damage by this
+    towerRangeMultiplier: 1.0, // Multiply all tower range by this
+
+    // ⚡ Special Mechanics
+    warpSpeedMultiplier: 10, // Fast-forward speed when no action needed
+    freezeSlowPercent: 0.5, // 0.5 = 50% slow
+    freezeDuration: 5000, // ms
+
+    // 💣 Splash Damage Radii
+    blastRadius: 60,
+    missileRadius: 120,
+
+    // ✈️ Air Attack Settings
+    airAttackWave: 5, // Which wave number triggers air attack (every 5 waves)
+    airAttackRefundPercent: 0.5, // 50% refund on destroyed tower
+  }
+
+  // Load config from localStorage or use defaults
+  function loadConfig() {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('towerDefenseConfig')
+      if (saved) {
+        try {
+          return {...DEFAULT_CONFIG, ...JSON.parse(saved)}
+        } catch (e) {
+          return {...DEFAULT_CONFIG}
+        }
+      }
+    }
+    return {...DEFAULT_CONFIG}
+  }
+
+  function saveConfig() {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('towerDefenseConfig', JSON.stringify(GAME_CONFIG))
+    }
+  }
+
+  function resetConfig() {
+    GAME_CONFIG = {...DEFAULT_CONFIG}
+    saveConfig()
+  }
+
+  let GAME_CONFIG = $state(loadConfig())
+  let showConfigPanel = $state(false)
+
   // Game state
   let canvas: HTMLCanvasElement
   let ctx: CanvasRenderingContext2D
   let animationId: number
   let gameRunning = $state(false)
   let gameOver = $state(false)
-  let health = $state(20)
-  let money = $state(200)
+  let health = $state(GAME_CONFIG.startingHealth)
+  let money = $state(GAME_CONFIG.startingMoney)
   let wave = $state(0)
   let score = $state(0)
   let enemies = $state<Enemy[]>([])
@@ -77,27 +174,19 @@
   let randomizePath = $state(true) // Default to true
   let secondEntrance = $state(false)
   let soundEnabled = $state(true) // Add sound toggle
-  let airAttackEnabled = $state(false) // Add air attack mode
+  let airAttackEnabled = $state(true) // Add air attack mode
   let airAttackUsedThisWave = $state(false) // Track if air attack happened this wave
   let jetPosition = $state<{ x: number; y: number } | null>(null) // Jet emoji position for animation
   let explosionPosition = $state<{ x: number; y: number } | null>(null) // Explosion position
   let level = $state(1) // Add level system
-  let wavesPerLevel = $state(5) // Waves needed to complete a level
   let levelCompleted = $state(false) // Show celebration when level is completed
   let countdown = $state(0) // Countdown timer before wave starts
   let countdownInterval: number | null = null
   let showBuyPlaceTowers = $state(false) // Show "Buy & Place Towers" overlay
   let blockedSquares = $state<Set<string>>(new Set()) // Squares blocked by air attack (stored as "x,y")
 
-  // Tower quantity limits
-  let towerQuantities = $state({
-    basic: 5,
-    sniper: 2,
-    blast: 4,
-    laser: 2,
-    freeze: 3,
-    missile: 1
-  })
+  // Tower quantity limits (loaded from config)
+  let towerQuantities = $state({...GAME_CONFIG.towerQuantities})
 
   // Predefined path patterns
   const pathPatterns: Point[][] = [
@@ -307,11 +396,13 @@
     },
   }
 
-  // Enemy types (balanced speed for level 1 - increased by 10%)
-  const enemyTypes = {
-    basic: { health: 50, speed: 1.65, reward: 10, color: "#ef4444" },
-    fast: { health: 30, speed: 3.3, reward: 15, color: "#ec4899" },
-    tank: { health: 150, speed: 0.825, reward: 30, color: "#78350f" },
+  // Enemy types (speeds now controlled by config)
+  function getEnemyTypes() {
+    return {
+      basic: { health: 50, speed: GAME_CONFIG.baseEnemySpeed, reward: 10, color: "#ef4444" },
+      fast: { health: 30, speed: GAME_CONFIG.fastEnemySpeed, reward: 15, color: "#ec4899" },
+      tank: { health: 150, speed: GAME_CONFIG.tankEnemySpeed, reward: 30, color: "#78350f" },
+    }
   }
 
   function convertPathToPixels(gridPath: Point[]): Point[] {
@@ -354,8 +445,8 @@
   function startGame() {
     gameRunning = true
     gameOver = false
-    health = 20
-    money = 200
+    health = GAME_CONFIG.startingHealth
+    money = GAME_CONFIG.startingMoney
     wave = 0
     level = 1
     score = 0
@@ -368,14 +459,7 @@
     nextProjectileId = 0
     enemiesSpawned = 0
     lastSpawnTime = 0
-    towerQuantities = {
-      basic: 5,
-      sniper: 2,
-      blast: 4,
-      laser: 2,
-      freeze: 3,
-      missile: 1
-    }
+    towerQuantities = {...GAME_CONFIG.towerQuantities}
     blockedSquares = new Set()
     selectRandomPath()
 
@@ -397,7 +481,7 @@
     if (enemies.length > 0) return
 
     // Check if we just completed a level (all waves done)
-    if (wave > 0 && wave % wavesPerLevel === 0) {
+    if (wave > 0 && wave % GAME_CONFIG.wavesPerLevel === 0) {
       // Level completed! Show celebration
       levelCompleted = true
 
@@ -435,21 +519,20 @@
       level++
       wave = 0 // Reset wave counter
 
-      // Increase enemy speed by 15% each level (more gradual than 25%)
-      enemySpeedMultiplier *= 1.15
+      // Increase enemy speed based on config
+      if (GAME_CONFIG.enemySpeedScalingType === "multiplicative") {
+        enemySpeedMultiplier *= (1 + GAME_CONFIG.enemySpeedPerLevel)
+      } else {
+        enemySpeedMultiplier += GAME_CONFIG.enemySpeedPerLevel
+      }
 
-      // Clear all towers
-      towers = []
+      // Clear all towers if configured
+      if (GAME_CONFIG.clearTowersBetweenLevels) {
+        towers = []
+      }
 
       // Restore all tower quantities
-      towerQuantities = {
-        basic: 5,
-        sniper: 2,
-        blast: 4,
-        laser: 2,
-        freeze: 3,
-        missile: 1
-      }
+      towerQuantities = {...GAME_CONFIG.towerQuantities}
 
       // Clear blocked squares for new level
       blockedSquares = new Set()
@@ -459,8 +542,12 @@
         selectRandomPath()
       }
 
-      // Reset money to starting amount
-      money = 200
+      // Reset or keep money based on config, plus bonus for level completion
+      if (!GAME_CONFIG.keepMoneyBetweenLevels) {
+        money = GAME_CONFIG.startingMoney + GAME_CONFIG.levelCompletionBonus
+      } else {
+        money += GAME_CONFIG.levelCompletionBonus
+      }
 
       // Don't continue - countdown will auto-start wave
       return
@@ -474,7 +561,11 @@
 
   function spawnEnemy() {
     const types: Array<"basic" | "fast" | "tank"> = ["basic", "fast", "tank"]
-    const weights = [0.6, 0.3, 0.1]
+    const weights = [
+      GAME_CONFIG.enemySpawnWeights.basic,
+      GAME_CONFIG.enemySpawnWeights.fast,
+      GAME_CONFIG.enemySpawnWeights.tank
+    ]
     const rand = Math.random()
     let type: "basic" | "fast" | "tank" = "basic"
 
@@ -482,8 +573,8 @@
     else if (rand < weights[0] + weights[1]) type = "fast"
     else type = "tank"
 
-    const enemyConfig = enemyTypes[type]
-    const healthMultiplier = 1 + (wave - 1) * 0.2
+    const enemyConfig = getEnemyTypes()[type]
+    const healthMultiplier = 1 + (wave - 1) * GAME_CONFIG.enemyHealthPerWave
 
     // Choose which entrance to spawn from
     const useSecondEntrance = secondEntrance && Math.random() > 0.5
@@ -506,11 +597,14 @@
   }
 
   function updateEnemies(deltaTime: number) {
-    // Spawn enemies for current wave
-    if (gameRunning && wave > 0 && enemiesSpawned < 5 + wave * 3) {
+    // Spawn enemies for current wave using config
+    const enemyCount = GAME_CONFIG.baseEnemyCount + wave * GAME_CONFIG.enemyCountPerWave
+    if (gameRunning && wave > 0 && enemiesSpawned < enemyCount) {
       const now = Date.now()
-      // Spawn interval: 1.5s, 1.4s, 1.3s, 1.2s, then 1s
-      const spawnInterval = Math.max(1000, 1500 - (wave - 1) * 100)
+      const spawnInterval = Math.max(
+        GAME_CONFIG.minSpawnInterval,
+        GAME_CONFIG.baseSpawnInterval - (wave - 1) * GAME_CONFIG.spawnIntervalDecrease
+      )
       if (now - lastSpawnTime > spawnInterval) {
         spawnEnemy()
         enemiesSpawned++
@@ -570,9 +664,9 @@
       // Update slow effect
       const now = Date.now()
       if (now < enemy.slowedUntil) {
-        enemy.speed = enemy.baseSpeed * 0.5
+        enemy.speed = enemy.baseSpeed * GAME_CONFIG.freezeSlowPercent
       } else if (warpSpeed) {
-        enemy.speed = enemy.baseSpeed * 10 // 10x speed when warping
+        enemy.speed = enemy.baseSpeed * GAME_CONFIG.warpSpeedMultiplier
       } else {
         enemy.speed = enemy.baseSpeed
       }
@@ -728,20 +822,20 @@
       if (distance < 10) {
         // Hit target
         if (projectile.type === "freeze") {
-          // Freeze effect - slow enemy for 5 seconds
+          // Freeze effect using config
           if (projectile.target) {
             const now = Date.now()
-            projectile.target.slowedUntil = now + 5000
+            projectile.target.slowedUntil = now + GAME_CONFIG.freezeDuration
             sounds.hit()
           }
         } else if (projectile.type === "blast" || projectile.type === "missile") {
-          // Splash damage
+          // Splash damage using config
           sounds.explosion()
           for (const enemy of enemies) {
             const edx = enemy.x - projectile.targetX
             const edy = enemy.y - projectile.targetY
             const edist = Math.sqrt(edx * edx + edy * edy)
-            const radius = projectile.type === "missile" ? 120 : 60
+            const radius = projectile.type === "missile" ? GAME_CONFIG.missileRadius : GAME_CONFIG.blastRadius
             if (edist < radius) {
               enemy.health -= projectile.damage * (1 - edist / radius)
             }
@@ -760,11 +854,13 @@
   }
 
   function triggerAirAttack() {
-    // Only trigger during Wave 5 of each level
-    if (!airAttackEnabled || towers.length === 0 || airAttackUsedThisWave || wave % wavesPerLevel !== 0) return
+    // Only trigger during configured wave of each level (e.g., wave 5 in each level)
+    const waveInLevel = ((wave - 1) % GAME_CONFIG.wavesPerLevel) + 1
+    if (!airAttackEnabled || towers.length === 0 || airAttackUsedThisWave || waveInLevel !== GAME_CONFIG.airAttackWave) return
 
-    // Trigger once at halfway through Wave 5
-    const waveProgress = enemiesSpawned / (5 + wave * 3)
+    // Trigger once at halfway through wave
+    const enemyCount = GAME_CONFIG.baseEnemyCount + wave * GAME_CONFIG.enemyCountPerWave
+    const waveProgress = enemiesSpawned / enemyCount
     if (waveProgress < 0.5) return // Wait until halfway through wave
 
     // Find tower causing most damage
@@ -813,8 +909,8 @@
             if (index !== -1) {
               towers.splice(index, 1)
               sounds.explosion()
-              // Give some money back
-              money += Math.floor(targetTower.cost * 0.5)
+              // Give some money back based on config
+              money += Math.floor(targetTower.cost * GAME_CONFIG.airAttackRefundPercent)
             }
 
             // Add permanent skull marker to blocked squares
@@ -985,7 +1081,7 @@
 
     // Draw enemies
     for (const enemy of enemies) {
-      const config = enemyTypes[enemy.type]
+      const config = getEnemyTypes()[enemy.type]
       const isSlowed = Date.now() < enemy.slowedUntil
 
       // Draw slowed indicator
@@ -1146,8 +1242,8 @@
       x: gridX * GRID_SIZE + GRID_SIZE / 2,
       y: gridY * GRID_SIZE + GRID_SIZE / 2,
       type: selectedTowerType,
-      damage: towerConfig.damage,
-      range: towerConfig.range,
+      damage: towerConfig.damage * GAME_CONFIG.towerDamageMultiplier,
+      range: towerConfig.range * GAME_CONFIG.towerRangeMultiplier,
       fireRate: towerConfig.fireRate,
       lastFired: 0,
       cost: towerConfig.cost,
@@ -1196,39 +1292,470 @@
   <h1 class="text-4xl font-bold mb-6">🗼 Tower Assault</h1>
 
   <div class="flex flex-col xl:flex-row gap-8 xl:h-[calc(100vh-200px)]">
-    <!-- Game Canvas -->
-    <div class="flex-shrink-0 relative">
-      <canvas
-        bind:this={canvas}
-        width={CANVAS_WIDTH}
-        height={CANVAS_HEIGHT}
-        class="border-4 border-base-300 rounded-lg shadow-xl"
-        onclick={handleCanvasClick}
-        onmousemove={handleCanvasMouseMove}
-        onmouseleave={() => (hoveredCell = null)}
-      ></canvas>
+    <!-- Game Canvas + Config Container -->
+    <div class="flex-shrink-0 flex flex-col gap-4">
+      <div class="relative">
+        <canvas
+          bind:this={canvas}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          class="border-4 border-base-300 rounded-lg shadow-xl"
+          onclick={handleCanvasClick}
+          onmousemove={handleCanvasMouseMove}
+          onmouseleave={() => (hoveredCell = null)}
+        ></canvas>
 
-      <!-- Subtle Countdown Timer (Top Right) -->
-      {#if countdown > 0}
-        <div class="absolute top-4 right-4 pointer-events-none">
-          <div class="bg-black bg-opacity-80 rounded-lg px-4 py-2 text-center border-2 border-blue-500">
-            <div class="text-sm text-blue-300 font-semibold mb-1">Wave starts in</div>
-            <div class="text-4xl font-bold text-white">{countdown}</div>
+        <!-- Subtle Countdown Timer (Top Right) -->
+        {#if countdown > 0}
+          <div class="absolute top-4 right-4 pointer-events-none">
+            <div class="bg-black bg-opacity-80 rounded-lg px-4 py-2 text-center border-2 border-blue-500">
+              <div class="text-sm text-blue-300 font-semibold mb-1">Wave starts in</div>
+              <div class="text-4xl font-bold text-white">{countdown}</div>
+            </div>
           </div>
-        </div>
-      {/if}
+        {/if}
 
-      <!-- Level Complete Celebration Overlay -->
-      {#if levelCompleted}
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div class="bg-gradient-to-br from-green-500 to-blue-500 bg-opacity-95 rounded-lg p-16 text-center shadow-2xl animate-pulse">
-            <div class="text-6xl mb-4">🎉</div>
-            <div class="text-5xl font-bold text-white mb-4">Level {level - 1} Complete!</div>
-            <div class="text-3xl text-white">Starting Level {level}...</div>
-            <div class="text-8xl mt-6">✨🎊✨</div>
+        <!-- Level Complete Celebration Overlay -->
+        {#if levelCompleted}
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="bg-gradient-to-br from-green-500 to-blue-500 bg-opacity-95 rounded-lg p-16 text-center shadow-2xl animate-pulse">
+              <div class="text-6xl mb-4">🎉</div>
+              <div class="text-5xl font-bold text-white mb-4">Level {level - 1} Complete!</div>
+              <div class="text-3xl text-white">Starting Level {level}...</div>
+              <div class="text-8xl mt-6">✨🎊✨</div>
+            </div>
           </div>
+        {/if}
+      </div>
+
+      <!-- Game Configuration Panel -->
+      <div class="card bg-base-200 shadow-xl">
+        <div class="card-body">
+          <button
+            class="flex justify-between items-center w-full text-left hover:bg-base-300 -m-2 p-2 rounded-lg transition-colors"
+            onclick={() => showConfigPanel = !showConfigPanel}
+            disabled={gameRunning}
+          >
+            <h2 class="card-title">⚙️ Game Configuration</h2>
+            <span class="text-sm">
+              {showConfigPanel ? '▼ Hide' : '▶ Show'}
+            </span>
+          </button>
+
+          {#if showConfigPanel}
+            <div class="divider my-2"></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[400px] overflow-y-auto">
+              <!-- Economy Settings -->
+              <div class="space-y-4">
+                <h3 class="font-semibold text-lg">💰 Economy</h3>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Starting Money</span>
+                    <span class="label-text-alt">${GAME_CONFIG.startingMoney}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="50"
+                    max="500"
+                    step="50"
+                    bind:value={GAME_CONFIG.startingMoney}
+                    onchange={saveConfig}
+                    class="range range-primary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Starting Health</span>
+                    <span class="label-text-alt">{GAME_CONFIG.startingHealth}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="50"
+                    step="5"
+                    bind:value={GAME_CONFIG.startingHealth}
+                    onchange={saveConfig}
+                    class="range range-primary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Level Completion Bonus</span>
+                    <span class="label-text-alt">${GAME_CONFIG.levelCompletionBonus}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="500"
+                    step="50"
+                    bind:value={GAME_CONFIG.levelCompletionBonus}
+                    onchange={saveConfig}
+                    class="range range-primary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label cursor-pointer">
+                    <span class="label-text">Keep Money Between Levels</span>
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-primary"
+                      bind:checked={GAME_CONFIG.keepMoneyBetweenLevels}
+                      onchange={saveConfig}
+                    />
+                  </label>
+                </div>
+
+                <div class="form-control">
+                  <label class="label cursor-pointer">
+                    <span class="label-text">Clear Towers Between Levels</span>
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-primary"
+                      bind:checked={GAME_CONFIG.clearTowersBetweenLevels}
+                      onchange={saveConfig}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Wave & Enemy Settings -->
+              <div class="space-y-4">
+                <h3 class="font-semibold text-lg">🌊 Waves & Enemies</h3>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Waves Per Level</span>
+                    <span class="label-text-alt">{GAME_CONFIG.wavesPerLevel}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="3"
+                    max="10"
+                    step="1"
+                    bind:value={GAME_CONFIG.wavesPerLevel}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Base Enemy Count</span>
+                    <span class="label-text-alt">{GAME_CONFIG.baseEnemyCount}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="3"
+                    max="15"
+                    step="1"
+                    bind:value={GAME_CONFIG.baseEnemyCount}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Enemies Added Per Wave</span>
+                    <span class="label-text-alt">+{GAME_CONFIG.enemyCountPerWave}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    step="1"
+                    bind:value={GAME_CONFIG.enemyCountPerWave}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Enemy Health Per Wave</span>
+                    <span class="label-text-alt">+{(GAME_CONFIG.enemyHealthPerWave * 100).toFixed(0)}%</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.5"
+                    step="0.05"
+                    bind:value={GAME_CONFIG.enemyHealthPerWave}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Base Enemy Speed</span>
+                    <span class="label-text-alt">{GAME_CONFIG.baseEnemySpeed.toFixed(2)}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="4.0"
+                    step="0.1"
+                    bind:value={GAME_CONFIG.baseEnemySpeed}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Fast Enemy Speed</span>
+                    <span class="label-text-alt">{GAME_CONFIG.fastEnemySpeed.toFixed(2)}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="2.0"
+                    max="6.0"
+                    step="0.1"
+                    bind:value={GAME_CONFIG.fastEnemySpeed}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Tank Enemy Speed</span>
+                    <span class="label-text-alt">{GAME_CONFIG.tankEnemySpeed.toFixed(2)}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.1"
+                    bind:value={GAME_CONFIG.tankEnemySpeed}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Enemy Speed Per Level</span>
+                    <span class="label-text-alt">
+                      {GAME_CONFIG.enemySpeedScalingType === 'multiplicative'
+                        ? `×${(1 + GAME_CONFIG.enemySpeedPerLevel).toFixed(2)}`
+                        : `+${GAME_CONFIG.enemySpeedPerLevel.toFixed(2)}`}
+                    </span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.3"
+                    step="0.05"
+                    bind:value={GAME_CONFIG.enemySpeedPerLevel}
+                    onchange={saveConfig}
+                    class="range range-secondary range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Speed Scaling Type</span>
+                  </label>
+                  <select
+                    class="select select-bordered select-sm w-full"
+                    bind:value={GAME_CONFIG.enemySpeedScalingType}
+                    onchange={saveConfig}
+                  >
+                    <option value="additive">Additive (Linear)</option>
+                    <option value="multiplicative">Multiplicative (Exponential)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tower Settings -->
+              <div class="space-y-4">
+                <h3 class="font-semibold text-lg">🏰 Tower Quantities</h3>
+
+                {#each Object.entries(GAME_CONFIG.towerQuantities) as [towerKey, quantity]}
+                  {@const towerName = towerTypes[towerKey as keyof typeof towerTypes].name}
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">{towerName}</span>
+                      <span class="label-text-alt">{quantity}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      bind:value={GAME_CONFIG.towerQuantities[towerKey]}
+                      onchange={saveConfig}
+                      class="range range-accent range-xs"
+                    />
+                  </div>
+                {/each}
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Tower Damage Multiplier</span>
+                    <span class="label-text-alt">×{GAME_CONFIG.towerDamageMultiplier.toFixed(2)}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="3.0"
+                    step="0.1"
+                    bind:value={GAME_CONFIG.towerDamageMultiplier}
+                    onchange={saveConfig}
+                    class="range range-accent range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Tower Range Multiplier</span>
+                    <span class="label-text-alt">×{GAME_CONFIG.towerRangeMultiplier.toFixed(2)}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.1"
+                    bind:value={GAME_CONFIG.towerRangeMultiplier}
+                    onchange={saveConfig}
+                    class="range range-accent range-xs"
+                  />
+                </div>
+              </div>
+
+              <!-- Spawn & Special Settings -->
+              <div class="space-y-4">
+                <h3 class="font-semibold text-lg">⚡ Advanced Settings</h3>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Base Spawn Interval (ms)</span>
+                    <span class="label-text-alt">{GAME_CONFIG.baseSpawnInterval}ms</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="500"
+                    max="3000"
+                    step="100"
+                    bind:value={GAME_CONFIG.baseSpawnInterval}
+                    onchange={saveConfig}
+                    class="range range-warning range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Warp Speed Multiplier</span>
+                    <span class="label-text-alt">×{GAME_CONFIG.warpSpeedMultiplier}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="5"
+                    max="20"
+                    step="1"
+                    bind:value={GAME_CONFIG.warpSpeedMultiplier}
+                    onchange={saveConfig}
+                    class="range range-warning range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Freeze Slow Percent</span>
+                    <span class="label-text-alt">{(GAME_CONFIG.freezeSlowPercent * 100).toFixed(0)}%</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0.25"
+                    max="0.75"
+                    step="0.05"
+                    bind:value={GAME_CONFIG.freezeSlowPercent}
+                    onchange={saveConfig}
+                    class="range range-warning range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Freeze Duration (ms)</span>
+                    <span class="label-text-alt">{GAME_CONFIG.freezeDuration}ms</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="2000"
+                    max="10000"
+                    step="500"
+                    bind:value={GAME_CONFIG.freezeDuration}
+                    onchange={saveConfig}
+                    class="range range-warning range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Blast Radius</span>
+                    <span class="label-text-alt">{GAME_CONFIG.blastRadius}px</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="40"
+                    max="120"
+                    step="10"
+                    bind:value={GAME_CONFIG.blastRadius}
+                    onchange={saveConfig}
+                    class="range range-warning range-xs"
+                  />
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text">Missile Radius</span>
+                    <span class="label-text-alt">{GAME_CONFIG.missileRadius}px</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="80"
+                    max="200"
+                    step="10"
+                    bind:value={GAME_CONFIG.missileRadius}
+                    onchange={saveConfig}
+                    class="range range-warning range-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="divider my-4"></div>
+
+            <div class="flex gap-2 justify-end">
+              <button
+                class="btn btn-error btn-sm"
+                onclick={resetConfig}
+              >
+                Reset to Defaults
+              </button>
+              <button
+                class="btn btn-success btn-sm"
+                onclick={saveConfig}
+              >
+                💾 Save Configuration
+              </button>
+            </div>
+
+            <div class="alert alert-info mt-4">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>Configuration is saved to your browser's local storage. Changes take effect on the next game.</span>
+            </div>
+          {/if}
         </div>
-      {/if}
+      </div>
     </div>
 
     <!-- Controls Panel -->
@@ -1248,7 +1775,7 @@
             <div class="stat py-2">
               <div class="stat-title text-xs">Wave</div>
               <div class="stat-value text-2xl text-info">
-                {wave}/{((level - 1) * wavesPerLevel) + wavesPerLevel}
+                {wave}
               </div>
             </div>
             <div class="stat py-2">
@@ -1269,38 +1796,7 @@
           <h2 class="card-title">Settings</h2>
 
         <div class="space-y-4">
-          <!-- Enemy Speed Setting -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-semibold">Enemy Speed</span>
-            </label>
-            <div class="flex gap-2">
-              <button
-                class="btn btn-xs flex-1 {enemySpeedMultiplier === 0.5 ? 'btn-success' : 'btn-outline'}"
-                onclick={() => (enemySpeedMultiplier = 0.5)}
-                disabled={gameRunning}
-              >
-                Slow (0.5x)
-              </button>
-              <button
-                class="btn btn-xs flex-1 {enemySpeedMultiplier === 1 ? 'btn-warning' : 'btn-outline'}"
-                onclick={() => (enemySpeedMultiplier = 1)}
-                disabled={gameRunning}
-              >
-                Normal (1x)
-              </button>
-              <button
-                class="btn btn-xs flex-1 {enemySpeedMultiplier === 1.5 ? 'btn-error' : 'btn-outline'}"
-                onclick={() => (enemySpeedMultiplier = 1.5)}
-                disabled={gameRunning}
-              >
-                Fast (1.5x)
-              </button>
-            </div>
-          </div>
-
           <!-- Options Section -->
-          <div class="divider my-2"></div>
           <div class="mb-2">
             <span class="label-text font-semibold">Options</span>
           </div>
@@ -1335,6 +1831,37 @@
               <span class="label-text">Air Attack</span>
               <input type="checkbox" class="checkbox" bind:checked={airAttackEnabled} disabled={gameRunning} />
             </label>
+          </div>
+
+          <!-- Enemy Speed Setting -->
+          <div class="divider my-2"></div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-semibold">Enemy Speed</span>
+            </label>
+            <div class="flex gap-2">
+              <button
+                class="btn btn-xs flex-1 {enemySpeedMultiplier === 0.5 ? 'btn-success' : 'btn-outline'}"
+                onclick={() => (enemySpeedMultiplier = 0.5)}
+                disabled={gameRunning}
+              >
+                Slow (0.5x)
+              </button>
+              <button
+                class="btn btn-xs flex-1 {enemySpeedMultiplier === 1 ? 'btn-warning' : 'btn-outline'}"
+                onclick={() => (enemySpeedMultiplier = 1)}
+                disabled={gameRunning}
+              >
+                Normal (1x)
+              </button>
+              <button
+                class="btn btn-xs flex-1 {enemySpeedMultiplier === 1.5 ? 'btn-error' : 'btn-outline'}"
+                onclick={() => (enemySpeedMultiplier = 1.5)}
+                disabled={gameRunning}
+              >
+                Fast (1.5x)
+              </button>
+            </div>
           </div>
 
           <!-- Game Status -->
@@ -1402,8 +1929,8 @@
               <li>Towers automatically shoot enemies in range</li>
               <li>Don't let enemies reach the end of the path</li>
               <li>Earn money by defeating enemies</li>
-              <li>Complete {wavesPerLevel} waves to advance a level</li>
-              <li>Enemy speed increases 25% each level</li>
+              <li>Complete {GAME_CONFIG.wavesPerLevel} waves to advance a level</li>
+              <li>Enemy speed increases {GAME_CONFIG.enemySpeedScalingType === 'multiplicative' ? (GAME_CONFIG.enemySpeedPerLevel * 100).toFixed(0) + '%' : GAME_CONFIG.enemySpeedPerLevel + 'x'} each level</li>
             </ul>
           </div>
         </div>
@@ -1422,8 +1949,8 @@
             <button class="btn btn-primary flex-1" onclick={startGame}>
               New Game
             </button>
-          {:else if wave === 0 || (enemies.length === 0 && enemiesSpawned >= 5 + (wave - 1) * 3)}
-            {@const justCompletedLevel = wave > 0 && wave % wavesPerLevel === 0}
+          {:else if wave === 0 || (enemies.length === 0 && enemiesSpawned >= GAME_CONFIG.baseEnemyCount + (wave - 1) * GAME_CONFIG.enemyCountPerWave)}
+            {@const justCompletedLevel = wave > 0 && wave % GAME_CONFIG.wavesPerLevel === 0}
             {@const nextLevel = level + 1}
             <button class="btn btn-success flex-1" onclick={startWave}>
               {justCompletedLevel ? `Start Level ${nextLevel}` : `Start Wave ${wave + 1}`}

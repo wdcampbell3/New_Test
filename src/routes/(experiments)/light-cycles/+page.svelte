@@ -332,14 +332,13 @@
       }
     })
 
-    // Only consider turning if danger is within threshold, random chance, pursuing power-up, or has shield
-    // When shielded, AI should turn more often to use invincibility strategically
-    const shieldTurnChance = hasShield ? 0.3 : 0 // 30% chance to turn when shielded
+    // Only consider turning if danger is within threshold, random chance, or pursuing power-up
+    // When shielded, slightly increase random turn chance for more strategic play
+    const shieldTurnChance = hasShield ? 0.02 : 0 // 2% extra chance to turn when shielded
     const shouldConsiderTurning =
       (dangerAhead && closestDanger <= turnThreshold) ||
       Math.random() < (randomTurnChance + shieldTurnChance) ||
-      nearestPowerUp !== null ||
-      hasShield // Always evaluate directions when shielded
+      nearestPowerUp !== null
 
     // If danger ahead, occasional random turn, power-up nearby, or shielded, consider turning
     if (shouldConsiderTurning) {
@@ -384,19 +383,19 @@
           score += 1 // Each safe distance increment adds to score
         }
 
-        // When shielded, add bonus for directions that will box in opponent or create strategic position
+        // When shielded, add small bonus for directions that will box in opponent or create strategic position
         if (hasShield) {
-          // Prefer perpendicular turns to create more trail coverage
+          // Slight preference for perpendicular turns to create more trail coverage
           if (
             (player2.direction === "up" || player2.direction === "down") &&
             (dir === "left" || dir === "right")
           ) {
-            score += 3 // Bonus for turning perpendicular
+            score += 1 // Small bonus for turning perpendicular
           } else if (
             (player2.direction === "left" || player2.direction === "right") &&
             (dir === "up" || dir === "down")
           ) {
-            score += 3 // Bonus for turning perpendicular
+            score += 1 // Small bonus for turning perpendicular
           }
         }
 
