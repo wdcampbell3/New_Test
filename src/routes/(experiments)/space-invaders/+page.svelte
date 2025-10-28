@@ -97,6 +97,11 @@
   // Power-up interval tracking for cleanup
   let powerUpInterval: number | null = null
 
+  // Performance monitoring
+  let lastFrameTime = 0
+  let frameCount = 0
+  let fps = 0
+
   // UFO
   let ufo = $state<{ x: number; y: number; width: number; height: number; active: boolean } | null>(null)
   let lastUfoSpawn = $state(0)
@@ -493,10 +498,10 @@
           fromPowerUp: "spreadshot",
         })
       } else if (activePowerUp === "laser") {
-        // FIXED: Laser fires ONCE for exactly 1 second when space is pressed
+        // FIXED: Laser fires ONCE for exactly 0.5 seconds when space is pressed
         if (laserReadyToFire && !laserUsed) {
           laserBeamActive = true
-          laserBeamTimeLeft = 1000 // 1 second in milliseconds
+          laserBeamTimeLeft = 500 // 0.5 seconds in milliseconds
           laserReadyToFire = false
           laserUsed = true // Mark as used - prevents re-triggering
 
@@ -504,7 +509,7 @@
           const startTime = Date.now()
           const interval = setInterval(() => {
             const elapsed = Date.now() - startTime
-            laserBeamTimeLeft = Math.max(0, 1000 - elapsed)
+            laserBeamTimeLeft = Math.max(0, 500 - elapsed)
 
             if (laserBeamTimeLeft <= 0) {
               laserBeamActive = false
@@ -591,6 +596,11 @@
   }
 
   function alienShoot() {
+    // PERFORMANCE: Cap alien bullets to prevent excessive collision checks
+    if (alienBullets.length >= 50) {
+      return
+    }
+
     const aliveAliens = aliens.filter((a) => a.alive)
     const diffMult = getDifficultyMultiplier()
     const fireChance = 0.02 * diffMult.fireRate
@@ -625,11 +635,50 @@
     }
   }
 
+  // Track power-ups spawned this level to limit certain types
+  let powerUpsSpawnedThisLevel: Record<PowerUpType, number> = {
+    rapidfire: 0,
+    shield: 0,
+    spreadshot: 0,
+    laser: 0,
+    star: 0,
+    missile: 0,
+  }
+
   function dropPowerUp(x: number, y: number) {
     if (Math.random() < 0.15) { // 15% chance
-      const types: PowerUpType[] = ["rapidfire", "shield", "spreadshot", "laser", "star", "missile"]
       const emojis = { rapidfire: "⚡", shield: "🛡️", spreadshot: "💥", laser: "🔫", star: "⭐", missile: "🚀" }
-      const type = types[Math.floor(Math.random() * types.length)]
+
+      // Calculate how far into the level we are (0 = start, 1 = end)
+      const totalAliens = aliens.length
+      const aliveCount = aliens.filter(a => a.alive).length
+      const levelProgress = totalAliens > 0 ? 1 - (aliveCount / totalAliens) : 0
+
+      // Strategic power-up distribution based on level progress
+      let availableTypes: PowerUpType[] = []
+
+      if (levelProgress < 0.33) {
+        // Early game (0-33%): Spreadshot, Shield, Missile
+        if (powerUpsSpawnedThisLevel.spreadshot < 3) availableTypes.push("spreadshot")
+        if (powerUpsSpawnedThisLevel.shield < 2) availableTypes.push("shield")
+        if (powerUpsSpawnedThisLevel.missile < 3) availableTypes.push("missile")
+      } else if (levelProgress < 0.66) {
+        // Mid game (33-66%): Spreadshot, Rapid Fire
+        if (powerUpsSpawnedThisLevel.spreadshot < 3) availableTypes.push("spreadshot")
+        if (powerUpsSpawnedThisLevel.rapidfire < 3) availableTypes.push("rapidfire")
+        if (powerUpsSpawnedThisLevel.missile < 3) availableTypes.push("missile")
+      } else {
+        // Late game (66-100%): Laser, Star (invincibility)
+        if (powerUpsSpawnedThisLevel.laser < 1) availableTypes.push("laser") // Only 1 laser per level
+        if (powerUpsSpawnedThisLevel.star < 2) availableTypes.push("star")
+        if (powerUpsSpawnedThisLevel.rapidfire < 3) availableTypes.push("rapidfire")
+      }
+
+      // If no types available, don't spawn anything
+      if (availableTypes.length === 0) return
+
+      const type = availableTypes[Math.floor(Math.random() * availableTypes.length)]
+      powerUpsSpawnedThisLevel[type]++
 
       powerUps.push({
         x,
@@ -789,6 +838,24 @@
   function update() {
     if (!gameRunning || gameOver || showLevelTransition) return
 
+    // Performance monitoring
+    const now = Date.now()
+    if (lastFrameTime > 0) {
+      const deltaTime = now - lastFrameTime
+      frameCount++
+
+      // Calculate FPS based on average of last 60 frames
+      if (frameCount % 60 === 0 && deltaTime > 0) {
+        fps = Math.round(1000 / deltaTime)
+
+        // Log performance warnings
+        if (fps < 30) {
+          console.warn(`Low FPS detected: ${fps} fps, Particles: ${particles.length}, Aliens: ${aliens.filter(a => a.alive).length}, Bullets: ${bullets.length}, Alien Bullets: ${alienBullets.length}`)
+        }
+      }
+    }
+    lastFrameTime = now
+
     updateStarfield()
     alienFrame = (alienFrame + 0.05) % 2
 
@@ -940,7 +1007,8 @@
     })
 
     // Check laser beam collisions (continuous damage while active)
-    if (laserBeamActive) {
+    // PERFORMANCE: Throttle laser collision checks to every 3rd frame
+    if (laserBeamActive && frameCount % 3 === 0) {
       const laserBeam = {
         x: player.x + player.width / 2 - 2,
         y: 0,
@@ -959,18 +1027,22 @@
           laserBeam.y + laserBeam.height > shield.y
         ) {
           laserBlocked = true
-          shield.health -= 0.05 // Laser damages shields slowly
+          shield.health -= 0.15 // Increased damage to compensate for throttling
           if (shield.health <= 0) {
             shields.splice(i, 1)
           }
+          break // Early exit - only need to check if blocked
         }
       }
 
       // Only damage aliens if laser is not blocked
       if (!laserBlocked) {
         for (let alien of aliens) {
-          if (alien.alive && checkCollision(laserBeam, alien)) {
-            alien.health--
+          // Skip dead aliens
+          if (!alien.alive) continue
+
+          if (checkCollision(laserBeam, alien)) {
+            alien.health -= 3 // Increased damage to compensate for throttling
 
             if (alien.health <= 0) {
               alien.alive = false
@@ -1018,7 +1090,11 @@
     }
 
     // Check alien bullet-player collisions
-    const now = Date.now()
+    // Debug: Log if there are too many alien bullets
+    if (alienBullets.length > 50) {
+      console.warn(`High alien bullet count: ${alienBullets.length}`)
+    }
+
     alienBullets = alienBullets.filter((bullet) => {
       if (checkCollision(bullet, player)) {
         if (activePowerUp === "shield") {
@@ -1083,6 +1159,7 @@
     // Move aliens
     const aliveAliens = aliens.filter((a) => a.alive)
     if (aliveAliens.length === 0) {
+      console.log("Level complete detected, alive aliens:", aliveAliens.length)
       // Level complete - immediately stop game and start transition
       gameRunning = false
       showLevelTransition = true
@@ -1090,6 +1167,7 @@
 
       level++
       score += 100 // Level complete bonus
+      console.log("Starting level transition to level:", level)
 
       // Clear everything immediately
       aliens = []
@@ -1118,6 +1196,16 @@
       if (powerUpInterval !== null) {
         clearInterval(powerUpInterval)
         powerUpInterval = null
+      }
+
+      // Reset power-up spawn tracking for new level
+      powerUpsSpawnedThisLevel = {
+        rapidfire: 0,
+        shield: 0,
+        spreadshot: 0,
+        laser: 0,
+        star: 0,
+        missile: 0,
       }
 
       // Gradually increase speed but cap it
@@ -1466,6 +1554,14 @@
     ctx.fillText(`Score: ${score}`, 20, 30)
     ctx.fillText(`Lives: ${lives}`, CANVAS_WIDTH - 150, 30)
     ctx.fillText(`Level: ${level}`, CANVAS_WIDTH / 2 - 50, 30)
+
+    // Draw FPS counter (debug)
+    if (fps > 0) {
+      ctx.fillStyle = fps < 30 ? "#ff0000" : fps < 45 ? "#ffff00" : "#00ff00"
+      ctx.font = "14px monospace"
+      ctx.textAlign = "right"
+      ctx.fillText(`FPS: ${fps}`, CANVAS_WIDTH - 20, CANVAS_HEIGHT - 10)
+    }
 
     if (combo > 2) {
       ctx.fillStyle = "#ffff00"
