@@ -718,6 +718,52 @@
       return
     }
 
+    // NON-QUEUE MODE: Handle special cases
+    if (!queuePowerUps && activePowerUp !== null) {
+      const now = Date.now()
+      const isCurrentlyInvincible = now < player.invincibleUntil
+
+      // If currently invincible (star effect active), keep invincibility and add shooting upgrade
+      if (isCurrentlyInvincible && activePowerUp === "star") {
+        // Keep invincibility timer running, just add the new weapon type
+        if (type === "rapidfire" || type === "spreadshot" || type === "laser" || type === "shield") {
+          activePowerUp = type
+          activePowerUpEmoji = emojiToUse
+          powerUpTimeLeft = duration
+          powerUpTotalDuration = duration
+          // Shooting speed stays at 3x (already set when star was activated)
+
+          // Clear and restart interval for new power-up
+          if (powerUpInterval !== null) clearInterval(powerUpInterval)
+          powerUpInterval = setInterval(() => {
+            powerUpTimeLeft -= 0.1
+            if (powerUpTimeLeft <= 0) {
+              activePowerUp = null
+              powerUpTimeLeft = 0
+              powerUpTotalDuration = 0
+              activePowerUpEmoji = ""
+              shootCooldown = BASE_SHOOT_COOLDOWN
+              if (powerUpInterval !== null) clearInterval(powerUpInterval)
+              powerUpInterval = null
+            }
+          }, 100) as unknown as number
+        }
+        return // Keep the existing invincibility
+      }
+
+      // If picking up invincible while having a weapon, keep weapon and add invincibility
+      if (type === "star") {
+        // Keep current weapon active, add invincibility on top
+        player.invincibleUntil = Date.now() + 6000
+        // Boost current weapon to 3x speed
+        shootCooldown = BASE_SHOOT_COOLDOWN / 3
+        // activePowerUp stays as current weapon type, don't change it
+        return
+      }
+
+      // For all other cases, new power-up replaces current one
+    }
+
     // Activate the power-up
     activePowerUp = type
     activePowerUpEmoji = emojiToUse
@@ -726,7 +772,7 @@
 
     if (type === "star") {
       player.invincibleUntil = Date.now() + 6000
-      shootCooldown = BASE_SHOOT_COOLDOWN / 2
+      shootCooldown = BASE_SHOOT_COOLDOWN / 3 // 3x speed for invincible
     }
 
     if (type === "rapidfire") {
@@ -770,7 +816,7 @@
     // Only deploy if there's a queued power-up
     if (powerUpQueue.length === 0) return
 
-    // Deploy the next power-up from the queue
+    // Deploy the next power-up from the queue (removes it)
     const nextPowerUp = powerUpQueue.shift()!
 
     // If there's an active power-up, push it back to the FRONT of the queue
@@ -782,8 +828,42 @@
       })
     }
 
-    // Activate the new power-up
-    activatePowerUpEffect(nextPowerUp.type, nextPowerUp.emoji)
+    // Clear existing interval
+    if (powerUpInterval !== null) {
+      clearInterval(powerUpInterval)
+    }
+
+    // Activate the new power-up (this will show it in bottom-left with timer)
+    activePowerUp = nextPowerUp.type
+    activePowerUpEmoji = nextPowerUp.emoji
+    powerUpTimeLeft = nextPowerUp.duration
+    powerUpTotalDuration = nextPowerUp.duration
+
+    // Apply power-up effects
+    if (nextPowerUp.type === "star") {
+      player.invincibleUntil = Date.now() + 6000
+      shootCooldown = BASE_SHOOT_COOLDOWN / 3
+    } else if (nextPowerUp.type === "rapidfire") {
+      shootCooldown = BASE_SHOOT_COOLDOWN / 3
+    } else if (nextPowerUp.type === "laser") {
+      laserReadyToFire = true
+      laserUsed = false
+    }
+
+    // Start the countdown timer
+    powerUpInterval = setInterval(() => {
+      powerUpTimeLeft -= 0.1
+      if (powerUpTimeLeft <= 0) {
+        // Power-up expired
+        activePowerUp = null
+        powerUpTimeLeft = 0
+        powerUpTotalDuration = 0
+        activePowerUpEmoji = ""
+        shootCooldown = BASE_SHOOT_COOLDOWN
+        if (powerUpInterval !== null) clearInterval(powerUpInterval)
+        powerUpInterval = null
+      }
+    }, 100) as unknown as number
   }
 
   function createExplosion(x: number, y: number, color: string) {
@@ -887,7 +967,7 @@
       return b.y > 0
     })
 
-    // Move missiles
+    // Move missiles (pass through shields)
     missiles = missiles.filter((m) => {
       m.y -= missileSpeed
 
@@ -898,6 +978,8 @@
           return false // Remove missile
         }
       }
+
+      // Missiles pass through shields - no collision check needed
 
       return m.y > -m.height
     })
@@ -1670,80 +1752,103 @@
     }
   }
 
+  // Shared AudioContext to prevent sound cutting out
+  let audioContext: AudioContext | null = null
+
+  function getAudioContext() {
+    if (!audioContext) {
+      try {
+        audioContext = new AudioContext()
+      } catch (e) {
+        console.error("Failed to create AudioContext:", e)
+        return null
+      }
+    }
+    return audioContext
+  }
+
   // Sound effects
   function playShootSound() {
     if (!soundEnabled) return
     try {
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      const ctx = getAudioContext()
+      if (!ctx) return
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
       oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      gainNode.connect(ctx.destination)
       oscillator.frequency.value = 400
       oscillator.type = "square"
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.1)
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.1)
     } catch (e) {
-      // Ignore audio context errors
+      // Ignore audio errors
     }
   }
 
   function playExplosionSound() {
     if (!soundEnabled) return
     try {
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      const ctx = getAudioContext()
+      if (!ctx) return
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
       oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      gainNode.connect(ctx.destination)
       oscillator.frequency.value = 100
       oscillator.type = "sawtooth"
-      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.3)
+      gainNode.gain.setValueAtTime(0.2, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.3)
     } catch (e) {
-      // Ignore audio context errors
+      // Ignore audio errors
     }
   }
 
   function playHitSound() {
     if (!soundEnabled) return
     try {
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      const ctx = getAudioContext()
+      if (!ctx) return
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
       oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      gainNode.connect(ctx.destination)
       oscillator.frequency.value = 200
       oscillator.type = "sawtooth"
-      gainNode.gain.setValueAtTime(0.15, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.2)
+      gainNode.gain.setValueAtTime(0.15, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2)
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.2)
     } catch (e) {
-      // Ignore audio context errors
+      // Ignore audio errors
     }
   }
 
   function playPowerUpSound() {
     if (!soundEnabled) return
     try {
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      const ctx = getAudioContext()
+      if (!ctx) return
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
       oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      gainNode.connect(ctx.destination)
       oscillator.frequency.value = 880
       oscillator.type = "sine"
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.2)
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2)
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.2)
     } catch (e) {
-      // Ignore audio context errors
+      // Ignore audio errors
     }
   }
 </script>
