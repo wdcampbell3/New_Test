@@ -916,8 +916,6 @@
   }
 
   function update() {
-    if (!gameRunning || gameOver || showLevelTransition) return
-
     // Performance monitoring
     const now = Date.now()
     if (lastFrameTime > 0) {
@@ -937,6 +935,15 @@
     lastFrameTime = now
 
     updateStarfield()
+
+    // Animate level transition
+    if (showLevelTransition) {
+      levelTransitionAlpha = Math.min(1, levelTransitionAlpha + 0.05)
+      return
+    }
+
+    if (!gameRunning || gameOver) return
+
     alienFrame = (alienFrame + 0.05) % 2
 
     // Update muzzle flash
@@ -1240,7 +1247,7 @@
 
     // Move aliens
     const aliveAliens = aliens.filter((a) => a.alive)
-    if (aliveAliens.length === 0) {
+    if (aliveAliens.length === 0 && !showLevelTransition) {
       console.log("Level complete detected, alive aliens:", aliveAliens.length)
       // Level complete - immediately stop game and start transition
       gameRunning = false
@@ -1297,31 +1304,19 @@
       // Reset direction for new wave
       alienDirection = 1
 
-      // Animate the transition
-      const transitionInterval = setInterval(() => {
-        levelTransitionAlpha += 0.05
-        if (levelTransitionAlpha >= 1) {
-          setTimeout(() => {
-            levelTransitionAlpha = 1
-            setTimeout(() => {
-              const fadeInterval = setInterval(() => {
-                levelTransitionAlpha -= 0.05
-                if (levelTransitionAlpha <= 0) {
-                  clearInterval(fadeInterval)
-                  showLevelTransition = false
+      // Start level transition with simple timeout instead of nested intervals
+      setTimeout(() => {
+        console.log("Level transition complete, starting new level")
+        showLevelTransition = false
 
-                  // Create new aliens and shields AFTER transition completes
-                  createAliens()
-                  createShields()
+        // Create new aliens and shields
+        createAliens()
+        createShields()
 
-                  gameRunning = true
-                }
-              }, 50)
-            }, 1500)
-          }, 50)
-          clearInterval(transitionInterval)
-        }
-      }, 50)
+        // Resume game
+        gameRunning = true
+      }, 2000) // 2 second transition
+
       return
     }
 
