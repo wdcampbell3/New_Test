@@ -8,6 +8,7 @@
   // Game state
   let gameRunning = $state(false)
   let gameOver = $state(false)
+  let gameStarted = $state(false) // Track if game has ever been started
   let score = $state(0)
   let highScore = $state(0)
   let lives = $state(3)
@@ -16,6 +17,9 @@
   let combo = $state(0)
   let maxCombo = $state(0)
   let soundEnabled = $state(true)
+  let powerUpCount = $state(12) // Number of power-ups per level
+  let startingLives = $state(5) // Number of lives at game start
+  let powerUpDuration = $state(5) // Duration of power-ups in seconds
 
   // Canvas dimensions
   const CANVAS_WIDTH = 800
@@ -90,12 +94,17 @@
   let laserBeamTimeLeft = $state(0)
   let laserReadyToFire = $state(false)
   let laserUsed = $state(false)
+  let laserInterval: number | null = null
 
   // Missile state
   let missileAvailable = $state(0)
 
   // Power-up interval tracking for cleanup
   let powerUpInterval: number | null = null
+  let powerUpCountdownSeconds = $state(0)
+
+  // Level transition timeout tracking
+  let levelTransitionTimeout: number | null = null
 
   // Performance monitoring
   let lastFrameTime = 0
@@ -146,6 +155,7 @@
   // Level transition
   let showLevelTransition = $state(false)
   let levelTransitionAlpha = $state(0)
+  let levelTransitionTriggered = $state(false)
 
   // Controls
   let keys = {
@@ -260,12 +270,15 @@
 
   function initGame() {
     score = 0
-    lives = 3
+    lives = startingLives
     level = 1
     combo = 0
     maxCombo = 0
     gameOver = false
     gameRunning = true
+    gameStarted = true
+    showLevelTransition = false
+    levelTransitionTriggered = false
     player.x = 375
     player.invincibleUntil = 0
     bullets = []
@@ -284,21 +297,35 @@
     missiles = []
     ufo = null
     lastUfoSpawn = Date.now()
+    lastShot = 0
     particles = []
     scorePopups = []
     playerMuzzleFlash = 0
-    alienMuzzleFlashes = new Set()
+    alienMuzzleFlashes.clear()
 
     // PERFORMANCE: Clean up any lingering intervals
     if (powerUpInterval !== null) {
       clearInterval(powerUpInterval)
       powerUpInterval = null
     }
+    if (laserInterval !== null) {
+      clearInterval(laserInterval)
+      laserInterval = null
+    }
+    if (levelTransitionTimeout !== null) {
+      clearTimeout(levelTransitionTimeout)
+      levelTransitionTimeout = null
+    }
 
     const diffMult = getDifficultyMultiplier()
     alienSpeed = 1 * diffMult.speed
     alienBulletSpeed = 4 * diffMult.speed
     shootCooldown = BASE_SHOOT_COOLDOWN
+
+    // Reset power-up tracking
+    powerUpsDroppedThisLevel = 0
+    powerUpDropIndices = []
+    powerUpTypes = []
 
     createAliens()
     createShields()
@@ -309,6 +336,9 @@
     aliens.length = 0
     aliens = []
     const diffMult = getDifficultyMultiplier()
+
+    // Reset power-up tracking for new level
+    powerUpsDroppedThisLevel = 0
 
     // Boss wave every 5th level
     if (level % 5 === 0) {
@@ -437,6 +467,28 @@
         }
       }
     }
+
+    // Set up power-up distribution - evenly spread across all aliens
+    const totalAliens = aliens.length
+    powerUpDropIndices = []
+    powerUpTypes = []
+
+    if (totalAliens > 0 && powerUpCount > 0) {
+      // Calculate spacing between power-ups
+      const spacing = Math.floor(totalAliens / powerUpCount)
+
+      // All available power-up types
+      const allTypes: PowerUpType[] = ["shield", "missile", "spreadshot", "rapidfire", "star", "laser"]
+
+      for (let i = 0; i < powerUpCount; i++) {
+        // Evenly distribute power-ups across aliens
+        const alienIndex = Math.floor((i * totalAliens) / powerUpCount) + Math.floor(Math.random() * spacing / 2)
+        powerUpDropIndices.push(Math.min(alienIndex, totalAliens - 1))
+
+        // Randomly select a power-up type
+        powerUpTypes.push(allTypes[Math.floor(Math.random() * allTypes.length)])
+      }
+    }
   }
 
   function createShields() {
@@ -505,9 +557,14 @@
           laserReadyToFire = false
           laserUsed = true // Mark as used - prevents re-triggering
 
+          // Clear any existing laser interval to prevent duplicates
+          if (laserInterval !== null) {
+            clearInterval(laserInterval)
+          }
+
           // Start the countdown timer
           const startTime = Date.now()
-          const interval = setInterval(() => {
+          laserInterval = setInterval(() => {
             const elapsed = Date.now() - startTime
             laserBeamTimeLeft = Math.max(0, 500 - elapsed)
 
@@ -518,9 +575,12 @@
               powerUpTimeLeft = 0
               powerUpTotalDuration = 0
               activePowerUpEmoji = ""
-              clearInterval(interval)
+              if (laserInterval !== null) {
+                clearInterval(laserInterval)
+                laserInterval = null
+              }
             }
-          }, 50)
+          }, 50) as unknown as number
 
           if (soundEnabled) playShootSound()
         }
@@ -556,7 +616,9 @@
   }
 
   function handleMissileExplosion(missileX: number, missileY: number) {
-    const explosionRadius = 60 // Radius to find adjacent aliens
+    // Explosion radius to catch adjacent aliens (left, right, and row above)
+    // Aliens are typically 60px apart horizontally and 40-50px vertically
+    const explosionRadius = 80
 
     let totalPoints = 0
     let aliensDestroyed = 0
@@ -635,60 +697,39 @@
     }
   }
 
-  // Track power-ups spawned this level to limit certain types
-  let powerUpsSpawnedThisLevel: Record<PowerUpType, number> = {
-    rapidfire: 0,
-    shield: 0,
-    spreadshot: 0,
-    laser: 0,
-    star: 0,
-    missile: 0,
-  }
+  // Track power-up drops for even distribution
+  let powerUpDropIndices = $state<number[]>([])
+  let powerUpTypes = $state<PowerUpType[]>([])
+  let powerUpsDroppedThisLevel = $state(0)
 
   function dropPowerUp(x: number, y: number) {
-    if (Math.random() < 0.15) { // 15% chance
-      const emojis = { rapidfire: "⚡", shield: "🛡️", spreadshot: "💥", laser: "🔫", star: "⭐", missile: "🚀" }
+    const emojis = { rapidfire: "⚡", shield: "🛡️", spreadshot: "💥", laser: "🔫", star: "⭐", missile: "🚀" }
 
-      // Calculate how far into the level we are (0 = start, 1 = end)
-      const totalAliens = aliens.length
-      const aliveCount = aliens.filter(a => a.alive).length
-      const levelProgress = totalAliens > 0 ? 1 - (aliveCount / totalAliens) : 0
-
-      // Strategic power-up distribution based on level progress
-      let availableTypes: PowerUpType[] = []
-
-      if (levelProgress < 0.33) {
-        // Early game (0-33%): Spreadshot, Shield, Missile
-        if (powerUpsSpawnedThisLevel.spreadshot < 3) availableTypes.push("spreadshot")
-        if (powerUpsSpawnedThisLevel.shield < 2) availableTypes.push("shield")
-        if (powerUpsSpawnedThisLevel.missile < 3) availableTypes.push("missile")
-      } else if (levelProgress < 0.66) {
-        // Mid game (33-66%): Spreadshot, Rapid Fire
-        if (powerUpsSpawnedThisLevel.spreadshot < 3) availableTypes.push("spreadshot")
-        if (powerUpsSpawnedThisLevel.rapidfire < 3) availableTypes.push("rapidfire")
-        if (powerUpsSpawnedThisLevel.missile < 3) availableTypes.push("missile")
-      } else {
-        // Late game (66-100%): Laser, Star (invincibility)
-        if (powerUpsSpawnedThisLevel.laser < 1) availableTypes.push("laser") // Only 1 laser per level
-        if (powerUpsSpawnedThisLevel.star < 2) availableTypes.push("star")
-        if (powerUpsSpawnedThisLevel.rapidfire < 3) availableTypes.push("rapidfire")
-      }
-
-      // If no types available, don't spawn anything
-      if (availableTypes.length === 0) return
-
-      const type = availableTypes[Math.floor(Math.random() * availableTypes.length)]
-      powerUpsSpawnedThisLevel[type]++
-
-      powerUps.push({
-        x,
-        y,
-        width: 20,
-        height: 20,
-        type,
-        emoji: emojis[type],
-      })
+    // Check if this alien should drop a power-up
+    const alienIndex = powerUpsDroppedThisLevel
+    if (!powerUpDropIndices.includes(alienIndex)) {
+      powerUpsDroppedThisLevel++
+      return
     }
+
+    // Find which power-up index this is
+    const powerUpIndex = powerUpDropIndices.indexOf(alienIndex)
+    if (powerUpIndex === -1 || powerUpIndex >= powerUpTypes.length) {
+      powerUpsDroppedThisLevel++
+      return
+    }
+
+    const powerUpType = powerUpTypes[powerUpIndex]
+    powerUpsDroppedThisLevel++
+
+    powerUps.push({
+      x,
+      y,
+      width: 20,
+      height: 20,
+      type: powerUpType,
+      emoji: emojis[powerUpType],
+    })
   }
 
   function activatePowerUpEffect(type: PowerUpType, emoji?: string) {
@@ -703,12 +744,10 @@
     const emojiToUse = emoji || emojis[type]
     let duration: number
 
-    if (type === "star") {
-      duration = 6 // Star invincibility lasts 6 seconds
-    } else if (type === "laser") {
-      duration = 1 // Laser fires once for 1 second when space is pressed
+    if (type === "laser") {
+      duration = 1 // Laser fires once for 0.5 seconds when space is pressed
     } else {
-      duration = 10 // 10 seconds for other power-ups
+      duration = powerUpDuration // Use the configurable power-up duration
     }
 
     // Check if we should queue this power-up
@@ -754,7 +793,7 @@
       // If picking up invincible while having a weapon, keep weapon and add invincibility
       if (type === "star") {
         // Keep current weapon active, add invincibility on top
-        player.invincibleUntil = Date.now() + 6000
+        player.invincibleUntil = Date.now() + (powerUpDuration * 1000)
         // Boost current weapon to 3x speed
         shootCooldown = BASE_SHOOT_COOLDOWN / 3
         // activePowerUp stays as current weapon type, don't change it
@@ -771,7 +810,7 @@
     powerUpTotalDuration = duration
 
     if (type === "star") {
-      player.invincibleUntil = Date.now() + 6000
+      player.invincibleUntil = Date.now() + (powerUpDuration * 1000)
       shootCooldown = BASE_SHOOT_COOLDOWN / 3 // 3x speed for invincible
     }
 
@@ -816,24 +855,23 @@
     // Only deploy if there's a queued power-up
     if (powerUpQueue.length === 0) return
 
-    // Deploy the next power-up from the queue (removes it)
+    // Deploy the next power-up from the queue (removes it immediately)
     const nextPowerUp = powerUpQueue.shift()!
 
-    // If there's an active power-up, push it back to the FRONT of the queue
-    if (activePowerUp && powerUpTimeLeft > 0) {
-      powerUpQueue.unshift({
-        type: activePowerUp,
-        emoji: activePowerUpEmoji,
-        duration: powerUpTimeLeft
-      })
-    }
-
-    // Clear existing interval
+    // Clear existing interval - current power-up ends (not saved)
     if (powerUpInterval !== null) {
       clearInterval(powerUpInterval)
+      powerUpInterval = null
+    }
+    if (laserInterval !== null) {
+      clearInterval(laserInterval)
+      laserInterval = null
     }
 
-    // Activate the new power-up (this will show it in bottom-left with timer)
+    // Reset shoot cooldown before activating new power-up
+    shootCooldown = BASE_SHOOT_COOLDOWN
+
+    // Activate the new power-up immediately
     activePowerUp = nextPowerUp.type
     activePowerUpEmoji = nextPowerUp.emoji
     powerUpTimeLeft = nextPowerUp.duration
@@ -841,7 +879,7 @@
 
     // Apply power-up effects
     if (nextPowerUp.type === "star") {
-      player.invincibleUntil = Date.now() + 6000
+      player.invincibleUntil = Date.now() + (powerUpDuration * 1000)
       shootCooldown = BASE_SHOOT_COOLDOWN / 3
     } else if (nextPowerUp.type === "rapidfire") {
       shootCooldown = BASE_SHOOT_COOLDOWN / 3
@@ -1214,6 +1252,21 @@
         if (lives <= 0) {
           gameOver = true
           gameRunning = false
+
+          // Clean up all intervals on game over
+          if (powerUpInterval !== null) {
+            clearInterval(powerUpInterval)
+            powerUpInterval = null
+          }
+          if (laserInterval !== null) {
+            clearInterval(laserInterval)
+            laserInterval = null
+          }
+          if (levelTransitionTimeout !== null) {
+            clearTimeout(levelTransitionTimeout)
+            levelTransitionTimeout = null
+          }
+
           if (score > highScore) {
             highScore = score
             if (typeof localStorage !== "undefined") {
@@ -1247,9 +1300,10 @@
 
     // Move aliens
     const aliveAliens = aliens.filter((a) => a.alive)
-    if (aliveAliens.length === 0 && !showLevelTransition) {
+    if (aliveAliens.length === 0 && !showLevelTransition && !levelTransitionTriggered) {
       console.log("Level complete detected, alive aliens:", aliveAliens.length)
       // Level complete - immediately stop game and start transition
+      levelTransitionTriggered = true
       gameRunning = false
       showLevelTransition = true
       levelTransitionAlpha = 0
@@ -1286,16 +1340,22 @@
         clearInterval(powerUpInterval)
         powerUpInterval = null
       }
-
-      // Reset power-up spawn tracking for new level
-      powerUpsSpawnedThisLevel = {
-        rapidfire: 0,
-        shield: 0,
-        spreadshot: 0,
-        laser: 0,
-        star: 0,
-        missile: 0,
+      if (laserInterval !== null) {
+        clearInterval(laserInterval)
+        laserInterval = null
       }
+      if (levelTransitionTimeout !== null) {
+        clearTimeout(levelTransitionTimeout)
+        levelTransitionTimeout = null
+      }
+
+      // Reset power-up tracking for new level
+      powerUpsDroppedThisLevel = 0
+      powerUpDropIndices = []
+      powerUpTypes = []
+
+      // Reset shoot cooldown to base value
+      shootCooldown = BASE_SHOOT_COOLDOWN
 
       // Gradually increase speed but cap it
       const diffMult = getDifficultyMultiplier()
@@ -1304,10 +1364,12 @@
       // Reset direction for new wave
       alienDirection = 1
 
-      // Start level transition with simple timeout instead of nested intervals
-      setTimeout(() => {
+      // Start level transition with tracked timeout
+      levelTransitionTimeout = setTimeout(() => {
         console.log("Level transition complete, starting new level")
         showLevelTransition = false
+        levelTransitionTriggered = false
+        levelTransitionTimeout = null
 
         // Create new aliens and shields
         createAliens()
@@ -1315,7 +1377,7 @@
 
         // Resume game
         gameRunning = true
-      }, 2000) // 2 second transition
+      }, 2000) as unknown as number // 2 second transition
 
       return
     }
@@ -1714,7 +1776,9 @@
   function resetGame() {
     gameRunning = false
     gameOver = false
+    gameStarted = false
     showLevelTransition = false
+    levelTransitionTriggered = false
     score = 0
     lives = 3
     level = 1
@@ -1739,11 +1803,22 @@
     player.x = 375
     player.invincibleUntil = 0
     ufo = null
+    lastUfoSpawn = Date.now()
+    lastShot = 0
+    alienMuzzleFlashes.clear()
 
     // PERFORMANCE: Clean up any lingering intervals
     if (powerUpInterval !== null) {
       clearInterval(powerUpInterval)
       powerUpInterval = null
+    }
+    if (laserInterval !== null) {
+      clearInterval(laserInterval)
+      laserInterval = null
+    }
+    if (levelTransitionTimeout !== null) {
+      clearTimeout(levelTransitionTimeout)
+      levelTransitionTimeout = null
     }
   }
 
@@ -1969,6 +2044,66 @@
               </label>
             </div>
 
+            <!-- Power-Up Count Slider -->
+            <div class="form-control">
+              <div class="label">
+                <span class="label-text font-semibold">Power-ups per Level: {powerUpCount}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="30"
+                bind:value={powerUpCount}
+                class="range range-xs"
+                disabled={gameRunning || gameOver}
+              />
+              <div class="w-full flex justify-between text-xs px-2">
+                <span>0</span>
+                <span>15</span>
+                <span>30</span>
+              </div>
+            </div>
+
+            <!-- Lives Count Slider -->
+            <div class="form-control">
+              <div class="label">
+                <span class="label-text font-semibold">Starting Lives: {startingLives}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                bind:value={startingLives}
+                class="range range-xs"
+                disabled={gameRunning || gameOver}
+              />
+              <div class="w-full flex justify-between text-xs px-2">
+                <span>1</span>
+                <span>5</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            <!-- Power-Up Duration Slider -->
+            <div class="form-control">
+              <div class="label">
+                <span class="label-text font-semibold">Power-up Duration: {powerUpDuration}s</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                bind:value={powerUpDuration}
+                class="range range-xs"
+                disabled={gameRunning || gameOver}
+              />
+              <div class="w-full flex justify-between text-xs px-2">
+                <span>1s</span>
+                <span>10s</span>
+                <span>20s</span>
+              </div>
+            </div>
+
             <!-- Instructions -->
             <div class="divider"></div>
             <div>
@@ -1995,11 +2130,11 @@
               <h3 class="font-semibold mb-2">Power-Ups:</h3>
               <ul class="list-disc list-inside space-y-1 text-sm">
                 <li>⚡ Rapid Fire - Shoot 3x faster</li>
-                <li>🛡️ Deflection Shield - Reflect bullets back (10s)</li>
-                <li>💥 Spread Shot - Fire 3 bullets</li>
-                <li>🔫 Laser - 1s continuous beam (Press SPACE once to fire)</li>
-                <li>⭐ Star - Invincible + 2x fire rate (6s)</li>
-                <li>🚀 Missile - Projectile with area damage (max 3, Press ↑)</li>
+                <li>🛡️ Deflection Shield - Reflect bullets back</li>
+                <li>💥 Spread Shot - Fire 3 bullets at once</li>
+                <li>🔫 Laser - Continuous beam (Press SPACE to fire)</li>
+                <li>⭐ Star - Invincible + 3x fire rate</li>
+                <li>🚀 Missile - Area damage explosion (max 3, Press ↑)</li>
               </ul>
             </div>
 
@@ -2021,11 +2156,19 @@
       <div class="card bg-base-200 shadow-xl">
         <div class="card-body p-4">
           <div class="flex gap-2">
-            {#if !gameRunning && !showLevelTransition}
+            {#if !gameStarted}
               <button class="btn btn-primary flex-1" onclick={initGame}>
-                {gameOver ? "Play Again" : "Start Game"}
+                Start Game
               </button>
-            {:else if !gameOver}
+            {:else if !gameRunning && !showLevelTransition && !gameOver}
+              <button class="btn btn-success flex-1" onclick={() => (gameRunning = true)}>
+                Resume
+              </button>
+            {:else if gameOver}
+              <button class="btn btn-primary flex-1" onclick={initGame}>
+                Play Again
+              </button>
+            {:else if gameRunning && !gameOver}
               <button
                 class="btn btn-warning flex-1"
                 onclick={() => (gameRunning = false)}
