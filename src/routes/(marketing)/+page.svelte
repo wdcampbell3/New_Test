@@ -1,7 +1,7 @@
 <script lang="ts">
   const games2D = [
     {
-      name: "� Space Invaders",
+      name: "👾 Space Invaders",
       path: "/space-invaders",
       description: "Defend Earth from alien invasion",
       image:
@@ -22,7 +22,7 @@
         "https://images.unsplash.com/photo-1534158914592-062992fbe900?w=400&h=300&fit=crop",
     },
     {
-      name: "� Tower Assault",
+      name: "🗼 Tower Assault",
       path: "/tower-defense",
       description: "Build towers and defend your base",
       image:
@@ -36,7 +36,7 @@
         "https://images.unsplash.com/photo-1635514569146-9a9607ecf303?w=400&h=300&fit=crop",
     },
     {
-      name: "� Snake-adelic",
+      name: "🐍 Snake-adelic",
       path: "/worm-game",
       description: "Psychedelic snake game with power-ups",
       image:
@@ -66,12 +66,16 @@
       <h1 class="text-6xl font-bold mb-4" style="color: #660460;">
         Dougie's Game Hub
       </h1>
-      <p class="text-2xl text-gray-600 italic">Vibe Coding Updates to some Classics!</p>
+      <p class="text-2xl text-gray-600 italic">
+        Vibe Coding Updates to some Classics!
+      </p>
     </div>
 
     <!-- 2D Games Section -->
     <div class="mb-16">
-      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">2D Games</h2>
+      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">
+        2D Games
+      </h2>
       <div
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
       >
@@ -108,7 +112,9 @@
 
     <!-- 3D Games Section -->
     <div>
-      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">3D Games</h2>
+      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">
+        3D Games
+      </h2>
       <div
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
       >

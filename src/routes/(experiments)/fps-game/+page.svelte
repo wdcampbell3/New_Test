@@ -84,28 +84,28 @@
     scene = new THREE.Scene()
 
     // Create sunset gradient (orange to purple to dark blue)
-    const canvas = document.createElement('canvas')
+    const canvas = document.createElement("canvas")
     canvas.width = 512
     canvas.height = 512
-    const context = canvas.getContext('2d')!
+    const context = canvas.getContext("2d")!
     const gradient = context.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, '#1a1a3e')  // Dark blue top
-    gradient.addColorStop(0.4, '#6B4E71') // Purple
-    gradient.addColorStop(0.7, '#D4738F') // Pink
-    gradient.addColorStop(1, '#FF9A56')    // Orange bottom
+    gradient.addColorStop(0, "#1a1a3e") // Dark blue top
+    gradient.addColorStop(0.4, "#6B4E71") // Purple
+    gradient.addColorStop(0.7, "#D4738F") // Pink
+    gradient.addColorStop(1, "#FF9A56") // Orange bottom
     context.fillStyle = gradient
     context.fillRect(0, 0, canvas.width, canvas.height)
 
     const texture = new THREE.CanvasTexture(canvas)
     scene.background = texture
-    scene.fog = new THREE.Fog(0xFF9A56, 20, 100)
+    scene.fog = new THREE.Fog(0xff9a56, 20, 100)
 
     // Camera
     camera = new THREE.PerspectiveCamera(
       75,
       container.clientWidth / container.clientHeight,
       0.1,
-      1000
+      1000,
     )
     camera.position.set(0, 1.6, 0)
 
@@ -208,7 +208,7 @@
 
     const foliage1 = new THREE.Mesh(
       new THREE.ConeGeometry(1.5, 2.5, 8),
-      foliageMaterial
+      foliageMaterial,
     )
     foliage1.position.y = 4.5
     foliage1.castShadow = true
@@ -216,7 +216,7 @@
 
     const foliage2 = new THREE.Mesh(
       new THREE.ConeGeometry(1.2, 2, 8),
-      foliageMaterial
+      foliageMaterial,
     )
     foliage2.position.y = 5.8
     foliage2.castShadow = true
@@ -224,7 +224,7 @@
 
     const foliage3 = new THREE.Mesh(
       new THREE.ConeGeometry(0.8, 1.5, 8),
-      foliageMaterial
+      foliageMaterial,
     )
     foliage3.position.y = 6.8
     foliage3.castShadow = true
@@ -235,16 +235,16 @@
 
   function loadCampfire() {
     const mtlLoader = new MTLLoader()
-    mtlLoader.setPath('/3d-models/')
+    mtlLoader.setPath("/3d-models/")
 
-    mtlLoader.load('Campfire.mtl', (materials: any) => {
+    mtlLoader.load("Campfire.mtl", (materials: any) => {
       materials.preload()
 
       const objLoader = new OBJLoader()
       objLoader.setMaterials(materials)
-      objLoader.setPath('/3d-models/')
+      objLoader.setPath("/3d-models/")
 
-      objLoader.load('Campfire.obj', (campfire: THREE.Group) => {
+      objLoader.load("Campfire.obj", (campfire: THREE.Group) => {
         // Position campfire in front of player spawn
         campfire.position.set(0, 0, -5)
         campfire.scale.set(2, 2, 2)
@@ -268,7 +268,8 @@
         // Animate fire light flicker
         const animateFireLight = () => {
           if (fireLight) {
-            fireLight.intensity = 2 + Math.sin(Date.now() * 0.005) * 0.5 + Math.random() * 0.3
+            fireLight.intensity =
+              2 + Math.sin(Date.now() * 0.005) * 0.5 + Math.random() * 0.3
           }
           requestAnimationFrame(animateFireLight)
         }
@@ -377,10 +378,16 @@
     gainNode.connect(audioContext.destination)
 
     oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
-    oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1)
+    oscillator.frequency.exponentialRampToValueAtTime(
+      200,
+      audioContext.currentTime + 0.1,
+    )
 
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      audioContext.currentTime + 0.1,
+    )
 
     oscillator.start(audioContext.currentTime)
     oscillator.stop(audioContext.currentTime + 0.1)
@@ -393,7 +400,11 @@
 
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
-    const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.5, audioContext.sampleRate)
+    const noiseBuffer = audioContext.createBuffer(
+      1,
+      audioContext.sampleRate * 0.5,
+      audioContext.sampleRate,
+    )
     const noiseData = noiseBuffer.getChannelData(0)
     for (let i = 0; i < noiseBuffer.length; i++) {
       noiseData[i] = Math.random() * 2 - 1
@@ -403,10 +414,16 @@
 
     oscillator.type = "sawtooth"
     oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
-    oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3)
+    oscillator.frequency.exponentialRampToValueAtTime(
+      50,
+      audioContext.currentTime + 0.3,
+    )
 
     gainNode.gain.setValueAtTime(0.5, audioContext.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      audioContext.currentTime + 0.3,
+    )
 
     oscillator.connect(gainNode)
     noiseSource.connect(gainNode)
@@ -481,7 +498,7 @@
       const velocity = new THREE.Vector3(
         (Math.random() - 0.5) * 5,
         (Math.random() - 0.5) * 5,
-        (Math.random() - 0.5) * 5
+        (Math.random() - 0.5) * 5,
       )
 
       scene.add(particle)
@@ -677,7 +694,8 @@
     direction.x = Number(moveRight) - Number(moveLeft)
     direction.normalize()
 
-    if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta
+    if (moveForward || moveBackward)
+      velocity.z -= direction.z * moveSpeed * delta
     if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta
 
     // Save current position
@@ -712,7 +730,9 @@
   function updateProjectiles(delta: number) {
     projectiles = projectiles.filter((projectile) => {
       // Move projectile
-      projectile.mesh.position.add(projectile.velocity.clone().multiplyScalar(delta))
+      projectile.mesh.position.add(
+        projectile.velocity.clone().multiplyScalar(delta),
+      )
 
       // Check collision with targets
       for (let i = 0; i < targets.length; i++) {
@@ -768,7 +788,10 @@
           } else {
             // Enemy damaged - flash all parts
             enemy.mesh.children.forEach((child: THREE.Object3D) => {
-              if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+              if (
+                child instanceof THREE.Mesh &&
+                child.material instanceof THREE.MeshStandardMaterial
+              ) {
                 const originalIntensity = child.material.emissiveIntensity
                 child.material.emissiveIntensity = 1.5
                 setTimeout(() => {
@@ -954,9 +977,7 @@
             class="absolute inset-0 flex items-center justify-center bg-black/70 z-10"
           >
             <div class="text-center">
-              <h2 class="text-3xl font-bold text-white mb-4">
-                Click to Start
-              </h2>
+              <h2 class="text-3xl font-bold text-white mb-4">Click to Start</h2>
               <button class="btn btn-primary btn-lg" onclick={startGame}>
                 Start Game
               </button>
@@ -1034,9 +1055,11 @@
           <div>
             <h3 class="font-semibold mb-2">Objective:</h3>
             <p class="text-sm">
-              Shoot the colorful spheres (10 points) and destroy red enemy cubes (50 points each, 2 hits to kill)!
-              Enemies will shoot red bullets back at you, dealing 10 damage. Watch your health and ammo!
-              Navigate through trees and obstacles to find the best vantage points.
+              Shoot the colorful spheres (10 points) and destroy red enemy cubes
+              (50 points each, 2 hits to kill)! Enemies will shoot red bullets
+              back at you, dealing 10 damage. Watch your health and ammo!
+              Navigate through trees and obstacles to find the best vantage
+              points.
             </p>
           </div>
         </div>

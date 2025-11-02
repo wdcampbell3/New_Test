@@ -2,12 +2,12 @@
   import { page } from "$app/stores"
 
   const experiments2D = [
-    { name: "Space Invaders", path: "/space-invaders", icon: "�" },
-    { name: "Light Particles", path: "/light-cycles", icon: "�️" },
-    { name: "Cosmic Pong", path: "/pong", icon: "�" },
-    { name: "Tower Assault", path: "/tower-defense", icon: "�" },
+    { name: "Space Invaders", path: "/space-invaders", icon: "👾" },
+    { name: "Light Particles", path: "/light-cycles", icon: "💡" },
+    { name: "Cosmic Pong", path: "/pong", icon: "🏓" },
+    { name: "Tower Assault", path: "/tower-defense", icon: "🗼" },
     { name: "Mine Buster", path: "/minesweeper", icon: "💣" },
-    { name: "Snake-adelic", path: "/worm-game", icon: "�" },
+    { name: "Snake-adelic", path: "/worm-game", icon: "🐍" },
   ]
 
   const experiments3D = [
@@ -66,7 +66,9 @@
 
         <!-- 2D Games Section -->
         <div class="mb-6">
-          <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">2D Games</h3>
+          <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">
+            2D Games
+          </h3>
           <ul class="menu gap-2">
             {#each experiments2D as experiment}
               <li>
@@ -85,7 +87,9 @@
 
         <!-- 3D Games Section -->
         <div>
-          <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">3D Games</h3>
+          <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">
+            3D Games
+          </h3>
           <ul class="menu gap-2">
             {#each experiments3D as experiment}
               <li>
