@@ -43,7 +43,7 @@
 
   // Enemies
   interface Enemy {
-    mesh: THREE.Mesh
+    mesh: THREE.Object3D
     health: number
     lastShot: number
     velocity: THREE.Vector3
@@ -237,20 +237,20 @@
     const mtlLoader = new MTLLoader()
     mtlLoader.setPath('/3d-models/')
 
-    mtlLoader.load('Campfire.mtl', (materials) => {
+    mtlLoader.load('Campfire.mtl', (materials: any) => {
       materials.preload()
 
       const objLoader = new OBJLoader()
       objLoader.setMaterials(materials)
       objLoader.setPath('/3d-models/')
 
-      objLoader.load('Campfire.obj', (campfire) => {
+      objLoader.load('Campfire.obj', (campfire: THREE.Group) => {
         // Position campfire in front of player spawn
         campfire.position.set(0, 0, -5)
         campfire.scale.set(2, 2, 2)
 
         // Enable shadows
-        campfire.traverse((child) => {
+        campfire.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true
             child.receiveShadow = true
@@ -433,7 +433,7 @@
 
     // Create laser bolt projectile
     const boltGeometry = new THREE.SphereGeometry(0.1, 8, 8)
-    const boltMaterial = new THREE.MeshBasicMaterial({
+    const boltMaterial = new THREE.MeshStandardMaterial({
       color: 0x00ffff,
       emissive: 0x00ffff,
       emissiveIntensity: 1,
@@ -567,7 +567,7 @@
 
     // Core - glowing sphere in center
     const coreGeometry = new THREE.SphereGeometry(0.3, 16, 16)
-    const coreMaterial = new THREE.MeshBasicMaterial({
+    const coreMaterial = new THREE.MeshStandardMaterial({
       color: 0xffff00,
       emissive: 0xffff00,
       emissiveIntensity: 1,
@@ -767,7 +767,7 @@
             }
           } else {
             // Enemy damaged - flash all parts
-            enemy.mesh.children.forEach((child) => {
+            enemy.mesh.children.forEach((child: THREE.Object3D) => {
               if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
                 const originalIntensity = child.material.emissiveIntensity
                 child.material.emissiveIntensity = 1.5
@@ -835,7 +835,7 @@
   function shootEnemyBullet(enemy: Enemy) {
     // Create enemy bullet
     const bulletGeometry = new THREE.SphereGeometry(0.15, 8, 8)
-    const bulletMaterial = new THREE.MeshBasicMaterial({
+    const bulletMaterial = new THREE.MeshStandardMaterial({
       color: 0xff0000,
       emissive: 0xff0000,
       emissiveIntensity: 1,
