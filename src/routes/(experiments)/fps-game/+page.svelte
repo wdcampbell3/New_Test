@@ -879,6 +879,45 @@
     enemyBullets.push({ mesh: bullet, velocity })
   }
 
+  // Player hit effect
+  let isPlayerHit = false
+  
+  function playHitSound() {
+    if (!audioContext) {
+      audioContext = new AudioContext()
+    }
+
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+
+    oscillator.type = "sawtooth"
+    oscillator.frequency.setValueAtTime(100, audioContext.currentTime)
+    oscillator.frequency.exponentialRampToValueAtTime(
+      50,
+      audioContext.currentTime + 0.2
+    )
+
+    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      audioContext.currentTime + 0.2
+    )
+
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.2)
+  }
+
+  function showPlayerHitEffect() {
+    isPlayerHit = true
+    playHitSound()
+    setTimeout(() => {
+      isPlayerHit = false
+    }, 100)
+  }
+
   function updateEnemyBullets(delta: number) {
     enemyBullets = enemyBullets.filter((bullet) => {
       // Move bullet
@@ -891,6 +930,7 @@
         // Hit player!
         health -= 10
         if (health < 0) health = 0
+        showPlayerHitEffect()
 
         scene.remove(bullet.mesh)
         return false // Remove bullet
@@ -962,32 +1002,51 @@
   <title>Blocky Shooter | Dougie's Game Hub</title>
 </svelte:head>
 
-<div class="container mx-auto p-8">
-  <h1 class="text-4xl font-bold mb-6">🎯 Blocky Shooter</h1>
+<style>
+  @keyframes flash {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
 
-  <div class="flex flex-col lg:flex-row gap-8">
-    <!-- Game Container -->
-    <div class="flex-1">
-      <div
-        bind:this={container}
-        class="relative w-full h-[600px] border-4 border-base-300 rounded-lg overflow-hidden bg-black"
-      >
-        {#if !isPlaying}
-          <div
-            class="absolute inset-0 flex items-center justify-center bg-black/70 z-10"
-          >
-            <div class="text-center">
-              <h2 class="text-3xl font-bold text-white mb-4">Click to Start</h2>
-              <button class="btn btn-primary btn-lg" onclick={startGame}>
-                Start Game
-              </button>
-              <p class="text-white mt-4">
-                Controls: WASD to move, Mouse to look, Click to shoot, Space to
-                jump, ESC to pause
-              </p>
-            </div>
+  .animate-flash {
+    animation: flash 0.1s linear;
+  }
+</style>
+
+<div class="flex flex-col md:flex-row h-screen overflow-hidden">
+  <!-- Back button -->
+  <div class="absolute top-4 left-4 z-30">
+    <a href="/" class="btn btn-primary">← Back to Home</a>
+  </div>
+
+  <!-- Game Container -->
+  <div class="flex-1 relative min-w-0">
+    <div
+      bind:this={container}
+      class="w-full h-full md:border-r-4 border-base-300 bg-black"
+    >
+      {#if !isPlaying}
+        <div
+          class="absolute inset-0 flex items-center justify-center bg-black/70 z-10"
+        >
+          <div class="text-center">
+            <h2 class="text-3xl font-bold text-white mb-4">Click to Start</h2>
+            <button class="btn btn-primary btn-lg" on:click={startGame}>
+              Start Game
+            </button>
+            <p class="text-white mt-4">
+              Controls: WASD to move, Mouse to look, Click to shoot, Space to
+              jump, ESC to pause
+            </p>
           </div>
-        {/if}
+        </div>
+      {/if}
+      
+      {#if isPlayerHit}
+        <div
+          class="absolute inset-0 bg-red-500/30 animate-flash pointer-events-none z-20"
+        />
+      {/if}
 
         <!-- HUD -->
         {#if isPlaying}
@@ -1016,53 +1075,46 @@
       </div>
     </div>
 
-    <!-- Info Panel -->
-    <div class="w-full lg:w-80">
-      <div class="card bg-base-200 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Game Info</h2>
+  <!-- Info Panel -->
+  <div class="w-full md:w-80 h-auto md:h-screen p-4 bg-base-200 overflow-y-auto">
+    <h1 class="text-2xl md:text-4xl font-bold mb-4 md:mb-6">🎯 Blocky Shooter</h1>
 
-          <div class="stats stats-vertical shadow">
-            <div class="stat">
-              <div class="stat-title">Score</div>
-              <div class="stat-value text-primary">{score}</div>
-            </div>
-            <div class="stat">
-              <div class="stat-title">Ammo</div>
-              <div class="stat-value text-secondary">{ammo}</div>
-            </div>
-            <div class="stat">
-              <div class="stat-title">Health</div>
-              <div class="stat-value text-accent">{health}</div>
-            </div>
-          </div>
+    <div class="stats stats-horizontal md:stats-vertical w-full mb-4 md:mb-6">
+      <div class="stat bg-base-100">
+        <div class="stat-title">Score</div>
+        <div class="stat-value text-primary text-2xl md:text-4xl">{score}</div>
+      </div>
+      <div class="stat bg-base-100">
+        <div class="stat-title">Ammo</div>
+        <div class="stat-value text-secondary text-2xl md:text-4xl">{ammo}</div>
+      </div>
+      <div class="stat bg-base-100">
+        <div class="stat-title">Health</div>
+        <div class="stat-value text-accent text-2xl md:text-4xl">{health}</div>
+      </div>
+    </div>
 
-          <div class="divider"></div>
+    <div class="space-y-4 md:space-y-6">
+      <div>
+        <h3 class="font-semibold mb-2 text-sm md:text-base">Controls:</h3>
+        <ul class="space-y-1 text-xs md:text-sm">
+          <li><kbd class="kbd kbd-sm">W/A/S/D</kbd> - Move</li>
+          <li><kbd class="kbd kbd-sm">Mouse</kbd> - Look around</li>
+          <li><kbd class="kbd kbd-sm">Click</kbd> - Shoot laser bolt</li>
+          <li><kbd class="kbd kbd-sm">Space</kbd> - Jump</li>
+          <li><kbd class="kbd kbd-sm">ESC</kbd> - Pause</li>
+        </ul>
+      </div>
 
-          <div>
-            <h3 class="font-semibold mb-2">Controls:</h3>
-            <ul class="list-disc list-inside space-y-1 text-sm">
-              <li><kbd class="kbd kbd-sm">W/A/S/D</kbd> - Move</li>
-              <li><kbd class="kbd kbd-sm">Mouse</kbd> - Look around</li>
-              <li><kbd class="kbd kbd-sm">Click</kbd> - Shoot laser bolt</li>
-              <li><kbd class="kbd kbd-sm">Space</kbd> - Jump</li>
-              <li><kbd class="kbd kbd-sm">ESC</kbd> - Pause</li>
-            </ul>
-          </div>
-
-          <div class="divider"></div>
-
-          <div>
-            <h3 class="font-semibold mb-2">Objective:</h3>
-            <p class="text-sm">
-              Shoot the colorful spheres (10 points) and destroy red enemy cubes
-              (50 points each, 2 hits to kill)! Enemies will shoot red bullets
-              back at you, dealing 10 damage. Watch your health and ammo!
-              Navigate through trees and obstacles to find the best vantage
-              points.
-            </p>
-          </div>
-        </div>
+      <div>
+        <h3 class="font-semibold mb-2 text-sm md:text-base">Objective:</h3>
+        <p class="text-xs md:text-sm">
+          Shoot the colorful spheres (10 points) and destroy red enemy cubes
+          (50 points each, 2 hits to kill)! Enemies will shoot red bullets
+          back at you, dealing 10 damage. Watch your health and ammo!
+          Navigate through trees and obstacles to find the best vantage
+          points.
+        </p>
       </div>
     </div>
   </div>
