@@ -1,3 +1,6 @@
+/// <reference types="svelte" />
+/// <reference types="vite/client" />
+
 declare global {
   type FormAccountUpdateResult = {
     errorMessage?: string
@@ -6,6 +9,12 @@ declare global {
     companyName?: string
     website?: string
     email?: string
+  }
+  
+  namespace svelteHTML {
+    interface HTMLAttributes<T> {
+      [key: string]: any;
+    }
   }
 }
 

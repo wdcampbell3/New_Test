@@ -12,11 +12,11 @@
   let controls: PointerLockControls
   let animationId: number
 
-  // Game state
-  let isPlaying = $state(false)
-  let score = $state(0)
-  let ammo = $state(30)
-  let health = $state(100)
+  // Game state using standard Svelte reactivity
+  let isPlaying = false
+  let score = 0
+  let ammo = 30
+  let health = 100
 
   // Movement
   const moveSpeed = 1.0 // Increased from 0.2 to 1.0
@@ -931,7 +931,7 @@
   }
 
   // Pointer lock events
-  $effect(() => {
+  onMount(() => {
     if (!controls) return
 
     const onLock = () => {
