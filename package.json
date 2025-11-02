@@ -53,7 +53,8 @@
     "@supabase/supabase-js": "^2.45.2",
     "handlebars": "^4.7.8",
     "resend": "^3.5.0",
-    "stripe": "^13.3.0"
+    "stripe": "^13.3.0",
+    "three": "^0.181.0"
   },
   "overrides": {
     "@supabase/auth-ui-svelte": {

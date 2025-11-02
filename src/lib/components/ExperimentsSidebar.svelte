@@ -1,13 +1,17 @@
 <script lang="ts">
   import { page } from "$app/stores"
 
-  const experiments = [
+  const experiments2D = [
     { name: "Snake-adelic", path: "/worm-game", icon: "🐍" },
     { name: "Cosmic Pong", path: "/pong", icon: "🏓" },
     { name: "Light Particles", path: "/light-cycles", icon: "🏍️" },
     { name: "Space Invaders", path: "/space-invaders", icon: "👾" },
     { name: "Mine Buster", path: "/minesweeper", icon: "💣" },
     { name: "Tower Assault", path: "/tower-defense", icon: "🗼" },
+  ]
+
+  const experiments3D = [
+    { name: "FPS Shooter", path: "/fps-game", icon: "🎯" },
   ]
 </script>
 
@@ -60,20 +64,43 @@
           ← Back to Home
         </a>
 
-        <ul class="menu gap-2">
-          {#each experiments as experiment}
-            <li>
-              <a
-                href={experiment.path}
-                class:active={$page.url.pathname === experiment.path}
-                class="flex items-center gap-3"
-              >
-                <span class="text-2xl">{experiment.icon}</span>
-                <span>{experiment.name}</span>
-              </a>
-            </li>
-          {/each}
-        </ul>
+        <!-- 2D Games Section -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">2D Games</h3>
+          <ul class="menu gap-2">
+            {#each experiments2D as experiment}
+              <li>
+                <a
+                  href={experiment.path}
+                  class:active={$page.url.pathname === experiment.path}
+                  class="flex items-center gap-3"
+                >
+                  <span class="text-2xl">{experiment.icon}</span>
+                  <span>{experiment.name}</span>
+                </a>
+              </li>
+            {/each}
+          </ul>
+        </div>
+
+        <!-- 3D Games Section -->
+        <div>
+          <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">3D Games</h3>
+          <ul class="menu gap-2">
+            {#each experiments3D as experiment}
+              <li>
+                <a
+                  href={experiment.path}
+                  class:active={$page.url.pathname === experiment.path}
+                  class="flex items-center gap-3"
+                >
+                  <span class="text-2xl">{experiment.icon}</span>
+                  <span>{experiment.name}</span>
+                </a>
+              </li>
+            {/each}
+          </ul>
+        </div>
       </div>
     </aside>
   </div>
