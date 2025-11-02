@@ -1,18 +1,11 @@
 <script lang="ts">
-  const experiments = [
+  const games2D = [
     {
-      name: "🐍 Snake-adelic",
-      path: "/worm-game",
-      description: "Psychedelic snake game with power-ups",
+      name: "� Space Invaders",
+      path: "/space-invaders",
+      description: "Defend Earth from alien invasion",
       image:
-        "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=300&fit=crop",
-    },
-    {
-      name: "🏓 Cosmic Pong",
-      path: "/pong",
-      description: "Classic arcade game - beat the AI!",
-      image:
-        "https://images.unsplash.com/photo-1534158914592-062992fbe900?w=400&h=300&fit=crop",
+        "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=300&fit=crop",
     },
     {
       name: "💡 Light Particles",
@@ -22,11 +15,18 @@
         "https://images.unsplash.com/photo-1617791160505-6f00504e3519?w=400&h=300&fit=crop",
     },
     {
-      name: "👾 Space Invaders",
-      path: "/space-invaders",
-      description: "Defend Earth from alien invasion",
+      name: "🏓 Cosmic Pong",
+      path: "/pong",
+      description: "Classic arcade game - beat the AI!",
       image:
-        "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=300&fit=crop",
+        "https://images.unsplash.com/photo-1534158914592-062992fbe900?w=400&h=300&fit=crop",
+    },
+    {
+      name: "� Tower Assault",
+      path: "/tower-defense",
+      description: "Build towers and defend your base",
+      image:
+        "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&h=300&fit=crop",
     },
     {
       name: "💣 Mine Buster",
@@ -36,11 +36,21 @@
         "https://images.unsplash.com/photo-1635514569146-9a9607ecf303?w=400&h=300&fit=crop",
     },
     {
-      name: "🗼 Tower Assault",
-      path: "/tower-defense",
-      description: "Build towers and defend your base",
+      name: "� Snake-adelic",
+      path: "/worm-game",
+      description: "Psychedelic snake game with power-ups",
       image:
-        "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&h=300&fit=crop",
+        "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=300&fit=crop",
+    },
+  ]
+
+  const games3D = [
+    {
+      name: "🎯 Blocky Shooter",
+      path: "/fps-game",
+      description: "First-person shooter with destructible environments",
+      image:
+        "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=400&h=300&fit=crop",
     },
   ]
 </script>
@@ -59,38 +69,78 @@
       <p class="text-2xl text-gray-600 italic">Vibe Coding Updates to some Classics!</p>
     </div>
 
-    <!-- Experiment Cards -->
-    <div
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
-    >
-      {#each experiments as experiment}
-        <a
-          href={experiment.path}
-          class="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
-        >
-          <figure class="h-48 overflow-hidden">
-            <img
-              src={experiment.image}
-              alt={experiment.name}
-              class="w-full h-full object-cover"
-            />
-          </figure>
-          <div class="card-body">
-            <h2 class="card-title" style="color: #660460;">
-              {experiment.name}
-            </h2>
-            <p class="text-gray-600">{experiment.description}</p>
-            <div class="card-actions justify-end mt-4">
-              <button
-                class="btn text-white border-0 hover:opacity-90"
-                style="background-color: #660460;"
-              >
-                Try it →
-              </button>
+    <!-- 2D Games Section -->
+    <div class="mb-16">
+      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">2D Games</h2>
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
+      >
+        {#each games2D as game}
+          <a
+            href={game.path}
+            class="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+          >
+            <figure class="h-48 overflow-hidden">
+              <img
+                src={game.image}
+                alt={game.name}
+                class="w-full h-full object-cover"
+              />
+            </figure>
+            <div class="card-body">
+              <h2 class="card-title" style="color: #660460;">
+                {game.name}
+              </h2>
+              <p class="text-gray-600">{game.description}</p>
+              <div class="card-actions justify-end mt-4">
+                <button
+                  class="btn text-white border-0 hover:opacity-90"
+                  style="background-color: #660460;"
+                >
+                  Try it →
+                </button>
+              </div>
             </div>
-          </div>
-        </a>
-      {/each}
+          </a>
+        {/each}
+      </div>
+    </div>
+
+    <!-- 3D Games Section -->
+    <div>
+      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">3D Games</h2>
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
+      >
+        {#each games3D as game}
+          <a
+            href={game.path}
+            class="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+          >
+            <figure class="h-48 overflow-hidden">
+              <img
+                src={game.image}
+                alt={game.name}
+                class="w-full h-full object-cover"
+              />
+            </figure>
+            <div class="card-body">
+              <h2 class="card-title" style="color: #660460;">
+                {game.name}
+              </h2>
+              <p class="text-gray-600">{game.description}</p>
+              <div class="card-actions justify-end mt-4">
+                <button
+                  class="btn text-white border-0 hover:opacity-90"
+                  style="background-color: #660460;"
+                >
+                  Try it →
+                </button>
+              </div>
+            </div>
+          </a>
+        {/each}
+      </div>
     </div>
   </div>
 </div>

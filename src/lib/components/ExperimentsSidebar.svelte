@@ -2,16 +2,16 @@
   import { page } from "$app/stores"
 
   const experiments2D = [
-    { name: "Snake-adelic", path: "/worm-game", icon: "🐍" },
-    { name: "Cosmic Pong", path: "/pong", icon: "🏓" },
-    { name: "Light Particles", path: "/light-cycles", icon: "🏍️" },
-    { name: "Space Invaders", path: "/space-invaders", icon: "👾" },
+    { name: "Space Invaders", path: "/space-invaders", icon: "�" },
+    { name: "Light Particles", path: "/light-cycles", icon: "�️" },
+    { name: "Cosmic Pong", path: "/pong", icon: "�" },
+    { name: "Tower Assault", path: "/tower-defense", icon: "�" },
     { name: "Mine Buster", path: "/minesweeper", icon: "💣" },
-    { name: "Tower Assault", path: "/tower-defense", icon: "🗼" },
+    { name: "Snake-adelic", path: "/worm-game", icon: "�" },
   ]
 
   const experiments3D = [
-    { name: "FPS Shooter", path: "/fps-game", icon: "🎯" },
+    { name: "Blocky Shooter", path: "/fps-game", icon: "🎯" },
   ]
 </script>
 
