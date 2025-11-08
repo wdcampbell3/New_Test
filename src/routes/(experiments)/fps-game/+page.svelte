@@ -1014,11 +1014,6 @@
 </style>
 
 <div class="flex flex-col md:flex-row h-screen overflow-hidden">
-  <!-- Back button -->
-  <div class="absolute top-4 left-4 z-30">
-    <a href="/" class="btn btn-primary">← Back to Home</a>
-  </div>
-
   <!-- Game Container -->
   <div class="flex-1 relative min-w-0">
     <div
