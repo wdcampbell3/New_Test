@@ -43,6 +43,40 @@
   let hasMouseMoved = $state(false) // Track if mouse moved during click
   let mouseDownPosition = { x: 0, y: 0 } // Track mouse position on down
 
+  // Maps Management
+  interface MapData {
+    id: string
+    name: string
+    description: string
+    created: number
+    modified: number
+    thumbnail: string
+    environment: {
+      timeOfDay: 'dawn' | 'day' | 'sunset' | 'night'
+      weather: 'clear' | 'rain' | 'snow' | 'fog'
+      fogDensity: number
+    }
+    objects: Array<{
+      modelPath: string
+      position: { x: number, y: number, z: number }
+      rotation: { x: number, y: number, z: number }
+      scale: { x: number, y: number, z: number }
+    }>
+    stats: {
+      objectCount: number
+      polygonCount: number
+    }
+  }
+
+  let savedMaps = $state<MapData[]>([])
+  let currentMapId = $state<string | null>(null)
+  let currentMapName = $state<string>('Untitled Map')
+  let activeTab = $state<'models' | 'maps' | 'options'>('models')
+  let timeOfDay = $state<'dawn' | 'day' | 'sunset' | 'night'>('sunset')
+  let weather = $state<'clear' | 'rain' | 'snow' | 'fog'>('clear')
+  let polygonCount = $state(0)
+  const MAX_POLYGON_WARNING = 100000
+
   // First-person mode (POV Mode)
   let isFirstPersonMode = $state(false)
   let isPOVPaused = $state(false) // Track if POV mode is paused
@@ -106,6 +140,9 @@
     // Randomize the catalog order
     modelCatalog = shuffleArray(modelCatalog)
 
+    // Load saved maps from localStorage
+    loadMapsFromStorage()
+
     initScene()
     animate()
     generateThumbnails()
@@ -120,25 +157,26 @@
     }
   })
 
+  function loadMapsFromStorage() {
+    const stored = localStorage.getItem('worldBuilder_maps')
+    if (stored) {
+      try {
+        savedMaps = JSON.parse(stored)
+      } catch (e) {
+        console.error('Failed to load maps:', e)
+        savedMaps = []
+      }
+    }
+  }
+
+  function saveMapsToStorage() {
+    localStorage.setItem('worldBuilder_maps', JSON.stringify(savedMaps))
+  }
+
   function initScene() {
-    // Scene with sunset gradient sky
+    // Scene
     scene = new THREE.Scene()
-
-    const canvas = document.createElement("canvas")
-    canvas.width = 512
-    canvas.height = 512
-    const context = canvas.getContext("2d")!
-    const gradient = context.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, "#1a1a3e")
-    gradient.addColorStop(0.4, "#6B4E71")
-    gradient.addColorStop(0.7, "#D4738F")
-    gradient.addColorStop(1, "#FF9A56")
-    context.fillStyle = gradient
-    context.fillRect(0, 0, canvas.width, canvas.height)
-
-    const texture = new THREE.CanvasTexture(canvas)
-    scene.background = texture
-    scene.fog = new THREE.Fog(0xff9a56, 50, 200)
+    updateEnvironment()
 
     // Camera
     camera = new THREE.PerspectiveCamera(
@@ -176,9 +214,11 @@
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+    ambientLight.name = 'ambientLight'
     scene.add(ambientLight)
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+    directionalLight.name = 'directionalLight'
     directionalLight.position.set(50, 50, 50)
     directionalLight.castShadow = true
     directionalLight.shadow.camera.left = -100
@@ -215,6 +255,74 @@
     renderer.domElement.addEventListener("mouseup", onMouseUp)
     renderer.domElement.addEventListener("click", onMouseClick)
     renderer.domElement.addEventListener("contextmenu", onRightClick)
+  }
+
+  function updateEnvironment() {
+    if (!scene) return
+
+    // Sky gradients for different times of day
+    const skyGradients = {
+      dawn: {
+        colors: ['#1a1a3e', '#6B4E71', '#D4738F', '#FFB56A'],
+        fogColor: 0xFFB56A,
+        ambientIntensity: 0.5,
+        directionalIntensity: 0.7
+      },
+      day: {
+        colors: ['#87CEEB', '#87CEEB', '#B0E0E6', '#F0F8FF'],
+        fogColor: 0xB0E0E6,
+        ambientIntensity: 0.7,
+        directionalIntensity: 1.0
+      },
+      sunset: {
+        colors: ['#1a1a3e', '#6B4E71', '#D4738F', '#FF9A56'],
+        fogColor: 0xff9a56,
+        ambientIntensity: 0.6,
+        directionalIntensity: 0.8
+      },
+      night: {
+        colors: ['#000033', '#000033', '#1a1a3e', '#2d2d5e'],
+        fogColor: 0x1a1a3e,
+        ambientIntensity: 0.3,
+        directionalIntensity: 0.4
+      }
+    }
+
+    const gradient = skyGradients[timeOfDay]
+
+    // Create sky gradient
+    const canvas = document.createElement("canvas")
+    canvas.width = 512
+    canvas.height = 512
+    const context = canvas.getContext("2d")!
+    const canvasGradient = context.createLinearGradient(0, 0, 0, canvas.height)
+    canvasGradient.addColorStop(0, gradient.colors[0])
+    canvasGradient.addColorStop(0.4, gradient.colors[1])
+    canvasGradient.addColorStop(0.7, gradient.colors[2])
+    canvasGradient.addColorStop(1, gradient.colors[3])
+    context.fillStyle = canvasGradient
+    context.fillRect(0, 0, canvas.width, canvas.height)
+
+    const texture = new THREE.CanvasTexture(canvas)
+    scene.background = texture
+
+    // Update fog based on weather
+    let fogDensity = weather === 'fog' ? 100 : 200
+    if (weather === 'rain') fogDensity = 150
+    if (weather === 'snow') fogDensity = 120
+
+    scene.fog = new THREE.Fog(gradient.fogColor, 50, fogDensity)
+
+    // Update lighting
+    const ambientLight = scene.getObjectByName('ambientLight') as THREE.AmbientLight
+    const directionalLight = scene.getObjectByName('directionalLight') as THREE.DirectionalLight
+
+    if (ambientLight) {
+      ambientLight.intensity = gradient.ambientIntensity
+    }
+    if (directionalLight) {
+      directionalLight.intensity = gradient.directionalIntensity
+    }
   }
 
   function onWindowResize() {
@@ -605,25 +713,134 @@
       placedObjects.forEach(obj => scene.remove(obj.mesh))
       placedObjects = []
       animatedObjects = []
+      currentMapId = null
+      currentMapName = 'Untitled Map'
+      updatePolygonCount()
     }
   }
 
-  function saveWorld() {
-    const worldData = placedObjects.map(obj => ({
-      modelPath: obj.modelPath,
-      position: { x: obj.mesh.position.x, y: obj.mesh.position.y, z: obj.mesh.position.z },
-      rotation: { x: obj.mesh.rotation.x, y: obj.mesh.rotation.y, z: obj.mesh.rotation.z },
-      scale: { x: obj.mesh.scale.x, y: obj.mesh.scale.y, z: obj.mesh.scale.z },
-    }))
-
-    localStorage.setItem("worldBuilder_save", JSON.stringify(worldData))
-    alert("World saved! (" + placedObjects.length + " objects)")
+  function createNewMap() {
+    if (placedObjects.length > 0) {
+      if (!confirm("Start a new map? Current unsaved work will be lost.")) {
+        return
+      }
+    }
+    clearScene()
+    activeTab = 'models'
   }
 
-  async function loadWorld() {
-    const savedData = localStorage.getItem("worldBuilder_save")
-    if (!savedData) {
-      alert("No saved world found!")
+  async function generateMapThumbnail(): Promise<string> {
+    // Create a temporary camera view
+    const thumbRenderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+    thumbRenderer.setSize(256, 256)
+    thumbRenderer.shadowMap.enabled = true
+
+    const thumbCamera = camera.clone()
+    thumbRenderer.render(scene, thumbCamera)
+    const thumbnail = thumbRenderer.domElement.toDataURL('image/png')
+    thumbRenderer.dispose()
+
+    return thumbnail
+  }
+
+  async function saveCurrentMap(mapName?: string, mapDescription?: string) {
+    const name = mapName || currentMapName || 'Untitled Map'
+    const description = mapDescription || ''
+
+    if (!name.trim()) {
+      alert('Please enter a map name')
+      return
+    }
+
+    const thumbnail = await generateMapThumbnail()
+    const now = Date.now()
+
+    const mapData: MapData = {
+      id: currentMapId || `map_${now}`,
+      name: name.trim(),
+      description: description.trim(),
+      created: currentMapId ? savedMaps.find(m => m.id === currentMapId)?.created || now : now,
+      modified: now,
+      thumbnail,
+      environment: {
+        timeOfDay,
+        weather,
+        fogDensity: scene.fog instanceof THREE.Fog ? scene.fog.far : 200
+      },
+      objects: placedObjects.map(obj => ({
+        modelPath: obj.modelPath,
+        position: { x: obj.mesh.position.x, y: obj.mesh.position.y, z: obj.mesh.position.z },
+        rotation: { x: obj.mesh.rotation.x, y: obj.mesh.rotation.y, z: obj.mesh.rotation.z },
+        scale: { x: obj.mesh.scale.x, y: obj.mesh.scale.y, z: obj.mesh.scale.z }
+      })),
+      stats: {
+        objectCount: placedObjects.length,
+        polygonCount
+      }
+    }
+
+    // Update or add map
+    const existingIndex = savedMaps.findIndex(m => m.id === mapData.id)
+    if (existingIndex >= 0) {
+      savedMaps[existingIndex] = mapData
+    } else {
+      savedMaps = [...savedMaps, mapData]
+    }
+
+    currentMapId = mapData.id
+    currentMapName = name
+    saveMapsToStorage()
+
+    alert(`Map "${name}" saved! (${placedObjects.length} objects)`)
+  }
+
+  async function saveAsNewMap() {
+    const baseName = currentMapName || 'Untitled Map'
+    const newName = prompt(`Save as new map. Enter a name:`, `${baseName} (Copy)`)
+
+    if (!newName || !newName.trim()) {
+      return
+    }
+
+    const thumbnail = await generateMapThumbnail()
+    const now = Date.now()
+
+    const mapData: MapData = {
+      id: `map_${now}`,
+      name: newName.trim(),
+      description: '',
+      created: now,
+      modified: now,
+      thumbnail,
+      environment: {
+        timeOfDay,
+        weather,
+        fogDensity: scene.fog instanceof THREE.Fog ? scene.fog.far : 200
+      },
+      objects: placedObjects.map(obj => ({
+        modelPath: obj.modelPath,
+        position: { x: obj.mesh.position.x, y: obj.mesh.position.y, z: obj.mesh.position.z },
+        rotation: { x: obj.mesh.rotation.x, y: obj.mesh.rotation.y, z: obj.mesh.rotation.z },
+        scale: { x: obj.mesh.scale.x, y: obj.mesh.scale.y, z: obj.mesh.scale.z }
+      })),
+      stats: {
+        objectCount: placedObjects.length,
+        polygonCount
+      }
+    }
+
+    savedMaps = [...savedMaps, mapData]
+    currentMapId = mapData.id
+    currentMapName = newName.trim()
+    saveMapsToStorage()
+
+    alert(`New map "${newName}" created! (${placedObjects.length} objects)`)
+  }
+
+  async function loadMap(mapId: string) {
+    const map = savedMaps.find(m => m.id === mapId)
+    if (!map) {
+      alert('Map not found!')
       return
     }
 
@@ -633,20 +850,20 @@
     animatedObjects = []
     selectedPlacedObject = null
 
-    const worldData = JSON.parse(savedData)
-    const loader = new GLTFLoader()
+    // Load environment settings
+    timeOfDay = map.environment.timeOfDay
+    weather = map.environment.weather
+    updateEnvironment()
 
-    for (const objData of worldData) {
+    // Load objects
+    const loader = new GLTFLoader()
+    for (const objData of map.objects) {
       try {
         const gltf = await loader.loadAsync(objData.modelPath)
         const newObject = gltf.scene
         newObject.position.set(objData.position.x, objData.position.y, objData.position.z)
         newObject.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z)
-
-        // Load scale (with fallback for old saves)
-        if (objData.scale) {
-          newObject.scale.set(objData.scale.x, objData.scale.y, objData.scale.z)
-        }
+        newObject.scale.set(objData.scale.x, objData.scale.y, objData.scale.z)
 
         newObject.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -658,7 +875,7 @@
         scene.add(newObject)
         placedObjects.push({ mesh: newObject, modelPath: objData.modelPath })
 
-        // Check if animated (only play if animations enabled)
+        // Check if animated
         if (gltf.animations && gltf.animations.length > 0) {
           const mixer = new THREE.AnimationMixer(newObject)
           gltf.animations.forEach((clip) => {
@@ -674,7 +891,91 @@
       }
     }
 
-    alert("World loaded! (" + placedObjects.length + " objects)")
+    currentMapId = map.id
+    currentMapName = map.name
+    updatePolygonCount()
+    activeTab = 'models'
+
+    alert(`Map "${map.name}" loaded! (${placedObjects.length} objects)`)
+  }
+
+  function deleteMap(mapId: string) {
+    const map = savedMaps.find(m => m.id === mapId)
+    if (!map) return
+
+    if (!confirm(`Delete map "${map.name}"? This cannot be undone.`)) {
+      return
+    }
+
+    savedMaps = savedMaps.filter(m => m.id !== mapId)
+    saveMapsToStorage()
+
+    if (currentMapId === mapId) {
+      currentMapId = null
+      currentMapName = 'Untitled Map'
+    }
+  }
+
+  function exportMap(mapId: string) {
+    const map = savedMaps.find(m => m.id === mapId)
+    if (!map) return
+
+    const dataStr = JSON.stringify(map, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${map.name.replace(/[^a-z0-9]/gi, '_')}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function importMap() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      try {
+        const text = await file.text()
+        const mapData: MapData = JSON.parse(text)
+
+        // Generate new ID to avoid conflicts
+        mapData.id = `map_${Date.now()}`
+        mapData.created = Date.now()
+        mapData.modified = Date.now()
+
+        savedMaps = [...savedMaps, mapData]
+        saveMapsToStorage()
+
+        alert(`Map "${mapData.name}" imported successfully!`)
+      } catch (error) {
+        alert('Failed to import map. Invalid file format.')
+        console.error(error)
+      }
+    }
+
+    input.click()
+  }
+
+  function updatePolygonCount() {
+    let count = 0
+    placedObjects.forEach(obj => {
+      obj.mesh.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.geometry) {
+          const geometry = child.geometry
+          if (geometry.index) {
+            count += geometry.index.count / 3
+          } else if (geometry.attributes.position) {
+            count += geometry.attributes.position.count / 3
+          }
+        }
+      })
+    })
+    polygonCount = Math.round(count)
   }
 
   const clock = new THREE.Clock()
@@ -713,6 +1014,20 @@
   $effect(() => {
     if (gridHelper) {
       gridHelper.visible = showGrid
+    }
+  })
+
+  // Don't use $effect for polygon count - it causes infinite loops
+  // Instead, call updatePolygonCount() manually when objects are added/removed
+
+  // Update environment when time of day or weather changes
+  $effect(() => {
+    // Reading these values establishes the dependency
+    const currentTime = timeOfDay
+    const currentWeather = weather
+    // Now update
+    if (scene) {
+      updateEnvironment()
     }
   })
 
@@ -1098,6 +1413,16 @@
 
 <svelte:window
   onkeydown={(e) => {
+    // Don't capture keyboard events when typing in input fields
+    const target = e.target as HTMLElement
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      // Only allow Escape to work in input fields
+      if (e.key === 'Escape') {
+        target.blur() // Unfocus the input
+      }
+      return
+    }
+
     // Handle Escape key (works in both modes)
     if (e.key === "Escape") {
       e.preventDefault()
@@ -1230,6 +1555,12 @@
     }
   }}
   onkeyup={(e) => {
+    // Don't capture keyboard events when typing in input fields
+    const target = e.target as HTMLElement
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      return
+    }
+
     // WASD and Space keys for first-person mode
     if (isFirstPersonMode) {
       const key = e.key.toLowerCase()
@@ -1317,8 +1648,6 @@
       ↷
     </button>
     <div class="divider divider-horizontal m-0"></div>
-    <button class="btn btn-sm btn-primary" onclick={saveWorld}>💾 Save</button>
-    <button class="btn btn-sm btn-success" onclick={loadWorld}>📂 Load</button>
     <button class="btn btn-sm btn-secondary" onclick={clearScene}>🗑️ Clear</button>
     <button class="btn btn-sm {showGrid ? 'btn-accent' : 'btn-ghost'}" onclick={toggleGrid}>
       📐 Grid: {showGrid ? 'ON' : 'OFF'}
@@ -1339,6 +1668,10 @@
     <button class="btn btn-sm btn-info text-lg font-bold" onclick={scaleUp}>+</button>
     <div class="divider divider-horizontal m-0"></div>
     <div class="badge badge-info">{placedObjects.length} objects</div>
+    <div class="badge badge-primary">{polygonCount.toLocaleString()} polys</div>
+    {#if polygonCount > MAX_POLYGON_WARNING}
+      <div class="badge badge-error">⚠️ High Poly Count!</div>
+    {/if}
     {#if selectedPlacedObject}
       <div class="badge badge-success">Object Selected</div>
     {/if}
@@ -1347,71 +1680,330 @@
     {/if}
   </div>
 
-  <!-- Object Palette Sidebar -->
-  <div class="w-full md:w-96 h-64 md:h-screen bg-base-200 overflow-y-auto p-4 order-last md:order-first">
-    <h2 class="text-2xl font-bold mb-4">🎨 Object Palette</h2>
-
-    <!-- Search Bar -->
-    <div class="form-control mb-2">
-      <input
-        type="text"
-        placeholder="Search models..."
-        class="input input-sm input-bordered w-full"
-        bind:value={searchQuery}
-      />
-    </div>
-
-    <!-- Category Dropdown -->
-    <div class="form-control mb-4">
-      <select
-        class="select select-sm select-bordered w-full"
-        bind:value={selectedCategory}
+  <!-- Sidebar with Tabs -->
+  <div class="w-full md:w-96 h-64 md:h-screen bg-base-200 overflow-hidden flex flex-col order-last md:order-first relative z-50" style="pointer-events: auto;">
+    <!-- Tab Headers -->
+    <div class="tabs tabs-boxed m-2 relative z-50" style="pointer-events: auto;">
+      <button
+        type="button"
+        class="tab {activeTab === 'models' ? 'tab-active' : ''}"
+        style="pointer-events: auto; cursor: pointer;"
+        onmousedown={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          console.log('Models tab mousedown')
+          activeTab = 'models'
+        }}
       >
-        {#each categories as category}
-          <option value={category}>{category}</option>
-        {/each}
-      </select>
+        🎨 Models
+      </button>
+      <button
+        type="button"
+        class="tab {activeTab === 'maps' ? 'tab-active' : ''}"
+        style="pointer-events: auto; cursor: pointer;"
+        onmousedown={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          console.log('Maps tab mousedown')
+          activeTab = 'maps'
+        }}
+      >
+        🗺️ Maps
+      </button>
+      <button
+        type="button"
+        class="tab {activeTab === 'options' ? 'tab-active' : ''}"
+        style="pointer-events: auto; cursor: pointer;"
+        onmousedown={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          console.log('Options tab mousedown')
+          activeTab = 'options'
+        }}
+      >
+        ⚙️ Options
+      </button>
     </div>
 
-    <!-- Model Count -->
-    <div class="text-xs text-gray-500 mb-3 flex justify-between items-center">
-      <span>{getFilteredModels().length} models</span>
-      {#if thumbnailsLoading}
-        <span class="loading loading-spinner loading-xs"></span>
-      {/if}
-    </div>
+    <!-- Tab Content -->
+    <div class="flex-1 overflow-y-auto p-4 pt-0">
+      {#if activeTab === 'models'}
+        <!-- Models Tab -->
+        <h2 class="text-2xl font-bold mb-4">Object Palette</h2>
 
-    <!-- Model Grid -->
-    <div class="grid grid-cols-3 gap-2">
-      {#each getFilteredModels() as model}
-        <button
-          class="btn btn-ghost p-0.5 h-auto flex-col gap-1 {selectedModel?.path === model.path ? 'ring-2 ring-primary' : ''}"
-          onclick={() => selectModel(model)}
-          title={model.name}
-        >
-          <div class="w-full aspect-square bg-base-300 rounded-md overflow-hidden flex items-center justify-center p-0.5">
-            {#if thumbnails.has(model.path) && thumbnails.get(model.path)}
-              <img
-                src={thumbnails.get(model.path)}
-                alt={model.name}
-                class="w-full h-full object-cover brightness-125"
-              />
-            {:else if !thumbnailsLoading}
-              <span class="text-4xl opacity-100">
-                {model.category === 'Animals' ? '🐾' :
-                 model.category === 'Enemies' ? '👾' :
-                 model.category === 'Nature' ? '🌳' :
-                 model.category === 'Buildings' ? '🏠' :
-                 model.category === 'Vehicles' ? '🚗' :
-                 model.category === 'Props' ? '📦' : '⬜'}
-              </span>
-            {:else}
-              <span class="loading loading-spinner loading-sm"></span>
+        <!-- Search Bar -->
+        <div class="form-control mb-2">
+          <input
+            type="text"
+            placeholder="Search models..."
+            class="input input-sm input-bordered w-full"
+            bind:value={searchQuery}
+          />
+        </div>
+
+        <!-- Category Dropdown -->
+        <div class="form-control mb-4">
+          <select
+            class="select select-sm select-bordered w-full"
+            bind:value={selectedCategory}
+          >
+            {#each categories as category}
+              <option value={category}>{category}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- Model Count -->
+        <div class="text-xs text-gray-500 mb-3 flex justify-between items-center">
+          <span>{getFilteredModels().length} models</span>
+          {#if thumbnailsLoading}
+            <span class="loading loading-spinner loading-xs"></span>
+          {/if}
+        </div>
+
+        <!-- Model Grid -->
+        <div class="grid grid-cols-3 gap-2">
+          {#each getFilteredModels() as model}
+            <button
+              class="btn btn-ghost p-0.5 h-auto flex-col gap-1 {selectedModel?.path === model.path ? 'ring-2 ring-primary' : ''}"
+              onclick={() => selectModel(model)}
+              title={model.name}
+            >
+              <div class="w-full aspect-square bg-base-300 rounded-md overflow-hidden flex items-center justify-center p-0.5">
+                {#if thumbnails.has(model.path) && thumbnails.get(model.path)}
+                  <img
+                    src={thumbnails.get(model.path)}
+                    alt={model.name}
+                    class="w-full h-full object-cover brightness-125"
+                  />
+                {:else if !thumbnailsLoading}
+                  <span class="text-4xl opacity-100">
+                    {model.category === 'Animals' ? '🐾' :
+                     model.category === 'Enemies' ? '👾' :
+                     model.category === 'Nature' ? '🌳' :
+                     model.category === 'Buildings' ? '🏠' :
+                     model.category === 'Vehicles' ? '🚗' :
+                     model.category === 'Props' ? '📦' : '⬜'}
+                  </span>
+                {:else}
+                  <span class="loading loading-spinner loading-sm"></span>
+                {/if}
+              </div>
+              <span class="text-xs truncate w-full">{model.name}</span>
+            </button>
+          {/each}
+        </div>
+
+      {:else if activeTab === 'maps'}
+        <!-- Maps Tab -->
+        <h2 class="text-2xl font-bold mb-4">Map Manager</h2>
+
+        <!-- Current Map Info -->
+        <div class="bg-base-300 p-3 rounded-lg mb-4">
+          <div class="text-sm font-semibold mb-1">Current Map:</div>
+          <input
+            type="text"
+            class="input input-sm input-bordered w-full mb-2"
+            bind:value={currentMapName}
+            placeholder="Map name..."
+          />
+          {#if currentMapId}
+            <!-- Editing existing map -->
+            <div class="flex gap-2 mb-2">
+              <button
+                class="btn btn-sm btn-primary flex-1"
+                onclick={() => saveCurrentMap(currentMapName)}
+                title="Overwrite the existing map"
+              >
+                💾 Save (Overwrite)
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <button
+                class="btn btn-sm btn-outline flex-1"
+                onclick={saveAsNewMap}
+                title="Save as a new copy"
+              >
+                📄 Save As New
+              </button>
+              <button
+                class="btn btn-sm btn-success"
+                onclick={createNewMap}
+              >
+                ✨ New
+              </button>
+            </div>
+          {:else}
+            <!-- Creating new map -->
+            <div class="flex gap-2">
+              <button
+                class="btn btn-sm btn-primary flex-1"
+                onclick={() => saveCurrentMap(currentMapName)}
+              >
+                💾 Save Map
+              </button>
+              <button
+                class="btn btn-sm btn-success"
+                onclick={createNewMap}
+              >
+                ✨ New
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Import/Export -->
+        <div class="flex gap-2 mb-4">
+          <button
+            class="btn btn-sm btn-outline flex-1"
+            onclick={importMap}
+          >
+            📥 Import
+          </button>
+        </div>
+
+        <!-- Saved Maps List -->
+        <h3 class="text-lg font-bold mb-2">Saved Maps ({savedMaps.length})</h3>
+
+        {#if savedMaps.length === 0}
+          <div class="text-sm text-gray-500 text-center py-8">
+            No saved maps yet.<br/>Create and save your first map!
+          </div>
+        {:else}
+          <div class="space-y-2">
+            {#each savedMaps.sort((a, b) => b.modified - a.modified) as map}
+              <div class="card bg-base-300 shadow-sm">
+                <div class="card-body p-3">
+                  {#if map.thumbnail}
+                    <img
+                      src={map.thumbnail}
+                      alt={map.name}
+                      class="w-full h-24 object-cover rounded mb-2"
+                    />
+                  {/if}
+                  <div class="font-semibold text-sm">{map.name}</div>
+                  <div class="text-xs text-gray-500">
+                    {map.stats.objectCount} objects • {map.stats.polygonCount.toLocaleString()} polys
+                    <br/>
+                    {map.environment.timeOfDay} • {map.environment.weather}
+                  </div>
+                  <div class="flex gap-1 mt-2">
+                    <button
+                      class="btn btn-xs btn-primary flex-1"
+                      onclick={() => loadMap(map.id)}
+                    >
+                      Load
+                    </button>
+                    <button
+                      class="btn btn-xs btn-outline"
+                      onclick={() => exportMap(map.id)}
+                      title="Export to file"
+                    >
+                      📤
+                    </button>
+                    <button
+                      class="btn btn-xs btn-error"
+                      onclick={() => deleteMap(map.id)}
+                      title="Delete map"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+      {:else if activeTab === 'options'}
+        <!-- Options Tab -->
+        <h2 class="text-2xl font-bold mb-4">Environment</h2>
+
+        <!-- Time of Day -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Time of Day</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              class="btn btn-sm {timeOfDay === 'dawn' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => timeOfDay = 'dawn'}
+            >
+              🌅 Dawn
+            </button>
+            <button
+              class="btn btn-sm {timeOfDay === 'day' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => timeOfDay = 'day'}
+            >
+              ☀️ Day
+            </button>
+            <button
+              class="btn btn-sm {timeOfDay === 'sunset' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => timeOfDay = 'sunset'}
+            >
+              🌇 Sunset
+            </button>
+            <button
+              class="btn btn-sm {timeOfDay === 'night' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => timeOfDay = 'night'}
+            >
+              🌙 Night
+            </button>
+          </div>
+        </div>
+
+        <!-- Weather -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Weather</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              class="btn btn-sm {weather === 'clear' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => weather = 'clear'}
+            >
+              ☀️ Clear
+            </button>
+            <button
+              class="btn btn-sm {weather === 'fog' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => weather = 'fog'}
+            >
+              🌫️ Fog
+            </button>
+            <button
+              class="btn btn-sm {weather === 'rain' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => weather = 'rain'}
+            >
+              🌧️ Rain
+            </button>
+            <button
+              class="btn btn-sm {weather === 'snow' ? 'btn-primary' : 'btn-outline'}"
+              onclick={() => weather = 'snow'}
+            >
+              ❄️ Snow
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="divider"></div>
+        <h3 class="text-lg font-bold mb-2">Scene Stats</h3>
+        <div class="stats stats-vertical shadow w-full">
+          <div class="stat p-3">
+            <div class="stat-title text-xs">Objects</div>
+            <div class="stat-value text-2xl">{placedObjects.length}</div>
+          </div>
+          <div class="stat p-3">
+            <div class="stat-title text-xs">Polygons</div>
+            <div class="stat-value text-2xl {polygonCount > MAX_POLYGON_WARNING ? 'text-error' : ''}">
+              {(polygonCount / 1000).toFixed(1)}k
+            </div>
+            {#if polygonCount > MAX_POLYGON_WARNING}
+              <div class="stat-desc text-error">High poly count may affect performance</div>
             {/if}
           </div>
-          <span class="text-xs truncate w-full">{model.name}</span>
-        </button>
-      {/each}
+        </div>
+      {/if}
     </div>
   </div>
 
