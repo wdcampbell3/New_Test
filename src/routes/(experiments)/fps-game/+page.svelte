@@ -166,6 +166,14 @@
     // Apply environment settings
     updateEnvironmentFromMap(map.environment)
 
+    // Reset camera position
+    camera.position.set(0, 3.0, 0)
+
+    // Reset velocity
+    velocity.set(0, 0, 0)
+    canJump = true
+    isJumping = false
+
     // Add ground
     const groundGeometry = new THREE.PlaneGeometry(200, 200)
     const groundMaterial = new THREE.MeshStandardMaterial({
@@ -303,7 +311,7 @@
       0.1,
       1000,
     )
-    camera.position.set(0, 1.6, 0)
+    camera.position.set(0, 3.0, 0)
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -903,7 +911,7 @@
 
     // Check collision and revert if necessary
     const newPosition = camera.position.clone()
-    newPosition.y = 1.6 // Use ground level for collision check
+    newPosition.y = 3.0 // Use ground level for collision check
 
     if (checkCollision(newPosition)) {
       // Revert to old position
@@ -915,9 +923,9 @@
     // Apply vertical movement (jumping/gravity)
     camera.position.y += velocity.y * delta
 
-    if (camera.position.y <= 1.6) {
+    if (camera.position.y <= 3.0) {
       velocity.y = 0
-      camera.position.y = 1.6
+      camera.position.y = 3.0
       canJump = true
       isJumping = false
     }
