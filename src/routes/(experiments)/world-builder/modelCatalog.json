@@ -1,373 +1,18 @@
 [
   {
-    "name": "Frog",
-    "path": "/3d-models/Animated Enemies-glb/Frog.glb",
-    "category": "Enemies"
+    "name": "Alpaca",
+    "path": "/3d-models/Animated Animal Pack-glb/Alpaca.glb",
+    "category": "Animals"
   },
   {
-    "name": "Rat",
-    "path": "/3d-models/Animated Enemies-glb/Rat.glb",
-    "category": "Enemies"
-  },
-  {
-    "name": "Snake",
-    "path": "/3d-models/Animated Enemies-glb/Snake.glb",
-    "category": "Enemies"
-  },
-  {
-    "name": "Spider",
-    "path": "/3d-models/Animated Enemies-glb/Spider.glb",
-    "category": "Enemies"
-  },
-  {
-    "name": "Wasp",
-    "path": "/3d-models/Animated Enemies-glb/Wasp.glb",
-    "category": "Enemies"
-  },
-  {
-    "name": "ATM",
-    "path": "/3d-models/City Pack.undefined-glb/ATM.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Adventurer",
-    "path": "/3d-models/City Pack.undefined-glb/Adventurer.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Air conditioner",
-    "path": "/3d-models/City Pack.undefined-glb/Air conditioner.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Animated Woman-nIItLV9nxS",
-    "path": "/3d-models/City Pack.undefined-glb/Animated Woman-nIItLV9nxS.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Animated Woman-qJ2gsTUBHL",
-    "path": "/3d-models/City Pack.undefined-glb/Animated Woman-qJ2gsTUBHL.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Animated Woman",
-    "path": "/3d-models/City Pack.undefined-glb/Animated Woman.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Bench",
-    "path": "/3d-models/City Pack.undefined-glb/Bench.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Bicycle",
-    "path": "/3d-models/City Pack.undefined-glb/Bicycle.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Big Building",
-    "path": "/3d-models/City Pack.undefined-glb/Big Building.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Billboard",
-    "path": "/3d-models/City Pack.undefined-glb/Billboard.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Box",
-    "path": "/3d-models/City Pack.undefined-glb/Box.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Brown Building",
-    "path": "/3d-models/City Pack.undefined-glb/Brown Building.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Building Green",
-    "path": "/3d-models/City Pack.undefined-glb/Building Green.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Building Red Corner",
-    "path": "/3d-models/City Pack.undefined-glb/Building Red Corner.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Building Red",
-    "path": "/3d-models/City Pack.undefined-glb/Building Red.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Bus Stop",
-    "path": "/3d-models/City Pack.undefined-glb/Bus Stop.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Bus stop sign",
-    "path": "/3d-models/City Pack.undefined-glb/Bus stop sign.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Bus",
-    "path": "/3d-models/City Pack.undefined-glb/Bus.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Car-unqqkULtRU",
-    "path": "/3d-models/City Pack.undefined-glb/Car-unqqkULtRU.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Car",
-    "path": "/3d-models/City Pack.undefined-glb/Car.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Cone",
-    "path": "/3d-models/City Pack.undefined-glb/Cone.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Debris Papers",
-    "path": "/3d-models/City Pack.undefined-glb/Debris Papers.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Dumpster",
-    "path": "/3d-models/City Pack.undefined-glb/Dumpster.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fence End",
-    "path": "/3d-models/City Pack.undefined-glb/Fence End.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fence Piece",
-    "path": "/3d-models/City Pack.undefined-glb/Fence Piece.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fence",
-    "path": "/3d-models/City Pack.undefined-glb/Fence.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fire Exit",
-    "path": "/3d-models/City Pack.undefined-glb/Fire Exit.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fire hydrant",
-    "path": "/3d-models/City Pack.undefined-glb/Fire hydrant.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Floor Hole",
-    "path": "/3d-models/City Pack.undefined-glb/Floor Hole.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Flower Pot-Kgt363WkKd",
-    "path": "/3d-models/City Pack.undefined-glb/Flower Pot-Kgt363WkKd.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Flower Pot",
-    "path": "/3d-models/City Pack.undefined-glb/Flower Pot.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Gb Blank",
-    "path": "/3d-models/City Pack.undefined-glb/Gb Blank.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Greenhouse",
-    "path": "/3d-models/City Pack.undefined-glb/Greenhouse.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Mailbox",
-    "path": "/3d-models/City Pack.undefined-glb/Mailbox.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Man",
-    "path": "/3d-models/City Pack.undefined-glb/Man.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Manhole Cover",
-    "path": "/3d-models/City Pack.undefined-glb/Manhole Cover.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Motorcycle",
-    "path": "/3d-models/City Pack.undefined-glb/Motorcycle.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Pickup Truck",
-    "path": "/3d-models/City Pack.undefined-glb/Pickup Truck.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Pizza Corner",
-    "path": "/3d-models/City Pack.undefined-glb/Pizza Corner.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Planter & Bushes",
-    "path": "/3d-models/City Pack.undefined-glb/Planter & Bushes.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Police Car",
-    "path": "/3d-models/City Pack.undefined-glb/Police Car.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Power Box",
-    "path": "/3d-models/City Pack.undefined-glb/Power Box.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "RB Blank",
-    "path": "/3d-models/City Pack.undefined-glb/RB Blank.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Road Bits",
-    "path": "/3d-models/City Pack.undefined-glb/Road Bits.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Rock band poster",
-    "path": "/3d-models/City Pack.undefined-glb/Rock band poster.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Roof Exit",
-    "path": "/3d-models/City Pack.undefined-glb/Roof Exit.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "SUV",
-    "path": "/3d-models/City Pack.undefined-glb/SUV.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Sports Car-Gzj704DXdr",
-    "path": "/3d-models/City Pack.undefined-glb/Sports Car-Gzj704DXdr.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Sports Car",
-    "path": "/3d-models/City Pack.undefined-glb/Sports Car.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Stop sign",
-    "path": "/3d-models/City Pack.undefined-glb/Stop sign.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Traffic Light",
-    "path": "/3d-models/City Pack.undefined-glb/Traffic Light.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Trash Can",
-    "path": "/3d-models/City Pack.undefined-glb/Trash Can.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Tree",
-    "path": "/3d-models/City Pack.undefined-glb/Tree.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Van",
-    "path": "/3d-models/City Pack.undefined-glb/Van.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Washing Line",
-    "path": "/3d-models/City Pack.undefined-glb/Washing Line.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Yellow Post-it",
-    "path": "/3d-models/City Pack.undefined-glb/Yellow Post-it.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "trah bag grey",
-    "path": "/3d-models/City Pack.undefined-glb/trah bag grey.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Axe Stone",
-    "path": "/3d-models/Cube World Kit-glb/Axe Stone.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Bamboo Mid",
-    "path": "/3d-models/Cube World Kit-glb/Bamboo Mid.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Bamboo-xBPj13w3JQ",
-    "path": "/3d-models/Cube World Kit-glb/Bamboo-xBPj13w3JQ.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Bamboo",
-    "path": "/3d-models/Cube World Kit-glb/Bamboo.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Big Crystal",
-    "path": "/3d-models/Cube World Kit-glb/Big Crystal.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Blank block",
-    "path": "/3d-models/Cube World Kit-glb/Blank block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Brick Block",
-    "path": "/3d-models/Cube World Kit-glb/Brick Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Bush",
-    "path": "/3d-models/Cube World Kit-glb/Bush.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Button",
-    "path": "/3d-models/Cube World Kit-glb/Button.glb",
-    "category": "Blocks"
+    "name": "Bull",
+    "path": "/3d-models/Animated Animal Pack-glb/Bull.glb",
+    "category": "Animals"
   },
   {
     "name": "Cat",
     "path": "/3d-models/Cube World Kit-glb/Cat.glb",
     "category": "Animals"
-  },
-  {
-    "name": "Cheese Block",
-    "path": "/3d-models/Cube World Kit-glb/Cheese Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Chest Open",
-    "path": "/3d-models/Cube World Kit-glb/Chest Open.glb",
-    "category": "Blocks"
   },
   {
     "name": "Chick",
@@ -380,363 +25,53 @@
     "category": "Animals"
   },
   {
-    "name": "Coal Block",
-    "path": "/3d-models/Cube World Kit-glb/Coal Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Crate",
-    "path": "/3d-models/Cube World Kit-glb/Crate.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Crystal Block",
-    "path": "/3d-models/Cube World Kit-glb/Crystal Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Crystal",
-    "path": "/3d-models/Cube World Kit-glb/Crystal.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Cube Guy Character",
-    "path": "/3d-models/Cube World Kit-glb/Cube Guy Character.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Cube Woman Character",
-    "path": "/3d-models/Cube World Kit-glb/Cube Woman Character.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Dead Tree-4E3IOActVF",
-    "path": "/3d-models/Cube World Kit-glb/Dead Tree-4E3IOActVF.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Dead Tree-9dGXS7GrWc",
-    "path": "/3d-models/Cube World Kit-glb/Dead Tree-9dGXS7GrWc.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Dead Tree",
-    "path": "/3d-models/Cube World Kit-glb/Dead Tree.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Demon",
-    "path": "/3d-models/Cube World Kit-glb/Demon.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Diamond Axe",
-    "path": "/3d-models/Cube World Kit-glb/Diamond Axe.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Diamond Block",
-    "path": "/3d-models/Cube World Kit-glb/Diamond Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Diamond Pickaxe",
-    "path": "/3d-models/Cube World Kit-glb/Diamond Pickaxe.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Diamond Shovel",
-    "path": "/3d-models/Cube World Kit-glb/Diamond Shovel.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Dirt Block",
-    "path": "/3d-models/Cube World Kit-glb/Dirt Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Dog",
-    "path": "/3d-models/Cube World Kit-glb/Dog.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Fence Center",
-    "path": "/3d-models/Cube World Kit-glb/Fence Center.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fence Corner",
-    "path": "/3d-models/Cube World Kit-glb/Fence Corner.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fence End",
-    "path": "/3d-models/Cube World Kit-glb/Fence End.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Fence T",
-    "path": "/3d-models/Cube World Kit-glb/Fence T.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Flowers-0mxlGKYE9P",
-    "path": "/3d-models/Cube World Kit-glb/Flowers-0mxlGKYE9P.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Flowers",
-    "path": "/3d-models/Cube World Kit-glb/Flowers.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Giant",
-    "path": "/3d-models/Cube World Kit-glb/Giant.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Goblin",
-    "path": "/3d-models/Cube World Kit-glb/Goblin.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Gold Axe",
-    "path": "/3d-models/Cube World Kit-glb/Gold Axe.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Gold Sword",
-    "path": "/3d-models/Cube World Kit-glb/Gold Sword.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Grass Block",
-    "path": "/3d-models/Cube World Kit-glb/Grass Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Grass Small",
-    "path": "/3d-models/Cube World Kit-glb/Grass Small.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Grass",
-    "path": "/3d-models/Cube World Kit-glb/Grass.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Grey Bricks",
-    "path": "/3d-models/Cube World Kit-glb/Grey Bricks.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Hedgehog",
-    "path": "/3d-models/Cube World Kit-glb/Hedgehog.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Horse",
-    "path": "/3d-models/Cube World Kit-glb/Horse.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Ice Block",
-    "path": "/3d-models/Cube World Kit-glb/Ice Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Key",
-    "path": "/3d-models/Cube World Kit-glb/Key.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Lever",
-    "path": "/3d-models/Cube World Kit-glb/Lever.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Metal Block",
-    "path": "/3d-models/Cube World Kit-glb/Metal Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Metal Door",
-    "path": "/3d-models/Cube World Kit-glb/Metal Door.glb",
-    "category": "Buildings"
-  },
-  {
-    "name": "Mushroom",
-    "path": "/3d-models/Cube World Kit-glb/Mushroom.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Pickaxe Gold",
-    "path": "/3d-models/Cube World Kit-glb/Pickaxe Gold.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Pickaxe Wood",
-    "path": "/3d-models/Cube World Kit-glb/Pickaxe Wood.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Pig",
-    "path": "/3d-models/Cube World Kit-glb/Pig.glb",
+    "name": "ChickenCoop",
+    "path": "/3d-models/Farm Buildings Bundle-glb/ChickenCoop.glb",
     "category": "Animals"
   },
   {
-    "name": "Plant-n31PjUy6Ra",
-    "path": "/3d-models/Cube World Kit-glb/Plant-n31PjUy6Ra.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Plant",
-    "path": "/3d-models/Cube World Kit-glb/Plant.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Raccoon",
-    "path": "/3d-models/Cube World Kit-glb/Raccoon.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Rail Corner",
-    "path": "/3d-models/Cube World Kit-glb/Rail Corner.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Rail Incline",
-    "path": "/3d-models/Cube World Kit-glb/Rail Incline.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Rail Straight",
-    "path": "/3d-models/Cube World Kit-glb/Rail Straight.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Rock-Xx1Jkg77vJ",
-    "path": "/3d-models/Cube World Kit-glb/Rock-Xx1Jkg77vJ.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Rock",
-    "path": "/3d-models/Cube World Kit-glb/Rock.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Sheep",
-    "path": "/3d-models/Cube World Kit-glb/Sheep.glb",
+    "name": "Cow",
+    "path": "/3d-models/Animated Animal Pack-glb/Cow.glb",
     "category": "Animals"
-  },
-  {
-    "name": "Shovel Gold",
-    "path": "/3d-models/Cube World Kit-glb/Shovel Gold.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Skeleton",
-    "path": "/3d-models/Cube World Kit-glb/Skeleton.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Snow Block",
-    "path": "/3d-models/Cube World Kit-glb/Snow Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Steve",
-    "path": "/3d-models/Cube World Kit-glb/Steve.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Stone Block",
-    "path": "/3d-models/Cube World Kit-glb/Stone Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Stone Pickaxe",
-    "path": "/3d-models/Cube World Kit-glb/Stone Pickaxe.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Stone Shovel",
-    "path": "/3d-models/Cube World Kit-glb/Stone Shovel.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Sword Diamond",
-    "path": "/3d-models/Cube World Kit-glb/Sword Diamond.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Sword Stone",
-    "path": "/3d-models/Cube World Kit-glb/Sword Stone.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Tree-ahBEW2RRgq",
-    "path": "/3d-models/Cube World Kit-glb/Tree-ahBEW2RRgq.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Tree-s8XdT4FOZz",
-    "path": "/3d-models/Cube World Kit-glb/Tree-s8XdT4FOZz.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Tree",
-    "path": "/3d-models/Cube World Kit-glb/Tree.glb",
-    "category": "Nature"
-  },
-  {
-    "name": "Wolf",
-    "path": "/3d-models/Cube World Kit-glb/Wolf.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Wood Axe",
-    "path": "/3d-models/Cube World Kit-glb/Wood Axe.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Wood Chest",
-    "path": "/3d-models/Cube World Kit-glb/Wood Chest.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Wood Planks Block",
-    "path": "/3d-models/Cube World Kit-glb/Wood Planks Block.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Wood Shovel",
-    "path": "/3d-models/Cube World Kit-glb/Wood Shovel.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Wooden Sword",
-    "path": "/3d-models/Cube World Kit-glb/Wooden Sword.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Yeti",
-    "path": "/3d-models/Cube World Kit-glb/Yeti.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "Zombie",
-    "path": "/3d-models/Cube World Kit-glb/Zombie.glb",
-    "category": "Blocks"
-  },
-  {
-    "name": "minecart",
-    "path": "/3d-models/Cube World Kit-glb/minecart.glb",
-    "category": "Blocks"
   },
   {
     "name": "Cow",
     "path": "/3d-models/Farm Animal Pack-glb/Cow.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Deer",
+    "path": "/3d-models/Animated Animal Pack-glb/Deer.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Dog",
+    "path": "/3d-models/Cube World Kit-glb/Dog.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Donkey",
+    "path": "/3d-models/Animated Animal Pack-glb/Donkey.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Fox",
+    "path": "/3d-models/Animated Animal Pack-glb/Fox.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Hedgehog",
+    "path": "/3d-models/Cube World Kit-glb/Hedgehog.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Horse",
+    "path": "/3d-models/Animated Animal Pack-glb/Horse.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Horse",
+    "path": "/3d-models/Cube World Kit-glb/Horse.glb",
     "category": "Animals"
   },
   {
@@ -745,8 +80,18 @@
     "category": "Animals"
   },
   {
+    "name": "Husky",
+    "path": "/3d-models/Animated Animal Pack-glb/Husky.glb",
+    "category": "Animals"
+  },
+  {
     "name": "Llama",
     "path": "/3d-models/Farm Animal Pack-glb/Llama.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Pig",
+    "path": "/3d-models/Cube World Kit-glb/Pig.glb",
     "category": "Animals"
   },
   {
@@ -760,8 +105,43 @@
     "category": "Animals"
   },
   {
+    "name": "Raccoon",
+    "path": "/3d-models/Cube World Kit-glb/Raccoon.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Sheep",
+    "path": "/3d-models/Cube World Kit-glb/Sheep.glb",
+    "category": "Animals"
+  },
+  {
     "name": "Sheep",
     "path": "/3d-models/Farm Animal Pack-glb/Sheep.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Shiba Inu",
+    "path": "/3d-models/Animated Animal Pack-glb/Shiba Inu.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Stag",
+    "path": "/3d-models/Animated Animal Pack-glb/Stag.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "White Horse",
+    "path": "/3d-models/Animated Animal Pack-glb/White Horse.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Wolf",
+    "path": "/3d-models/Animated Animal Pack-glb/Wolf.glb",
+    "category": "Animals"
+  },
+  {
+    "name": "Wolf",
+    "path": "/3d-models/Cube World Kit-glb/Wolf.glb",
     "category": "Animals"
   },
   {
@@ -770,13 +150,718 @@
     "category": "Animals"
   },
   {
-    "name": "Bush with Flowers",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Bush with Flowers.glb",
+    "name": "Blank block",
+    "path": "/3d-models/Cube World Kit-glb/Blank block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Brick Block",
+    "path": "/3d-models/Cube World Kit-glb/Brick Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Cheese Block",
+    "path": "/3d-models/Cube World Kit-glb/Cheese Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Coal Block",
+    "path": "/3d-models/Cube World Kit-glb/Coal Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Crystal Block",
+    "path": "/3d-models/Cube World Kit-glb/Crystal Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Diamond Block",
+    "path": "/3d-models/Cube World Kit-glb/Diamond Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Dirt Block",
+    "path": "/3d-models/Cube World Kit-glb/Dirt Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Grass Block",
+    "path": "/3d-models/Cube World Kit-glb/Grass Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Grey Bricks",
+    "path": "/3d-models/Cube World Kit-glb/Grey Bricks.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Ice Block",
+    "path": "/3d-models/Cube World Kit-glb/Ice Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Metal Block",
+    "path": "/3d-models/Cube World Kit-glb/Metal Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Snow Block",
+    "path": "/3d-models/Cube World Kit-glb/Snow Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Stone Block",
+    "path": "/3d-models/Cube World Kit-glb/Stone Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Wood Planks Block",
+    "path": "/3d-models/Cube World Kit-glb/Wood Planks Block.glb",
+    "category": "Blocks"
+  },
+  {
+    "name": "Barn",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Barn.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Big Barn",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Big Barn.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Big Building",
+    "path": "/3d-models/City Pack.undefined-glb/Big Building.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Brown Building",
+    "path": "/3d-models/City Pack.undefined-glb/Brown Building.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Building Green",
+    "path": "/3d-models/City Pack.undefined-glb/Building Green.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Building Red",
+    "path": "/3d-models/City Pack.undefined-glb/Building Red.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Building Red Corner",
+    "path": "/3d-models/City Pack.undefined-glb/Building Red Corner.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Floor Hole",
+    "path": "/3d-models/City Pack.undefined-glb/Floor Hole.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Gb Blank",
+    "path": "/3d-models/City Pack.undefined-glb/Gb Blank.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Greenhouse",
+    "path": "/3d-models/City Pack.undefined-glb/Greenhouse.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Open Barn",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Open Barn.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Pizza Corner",
+    "path": "/3d-models/City Pack.undefined-glb/Pizza Corner.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "RB Blank",
+    "path": "/3d-models/City Pack.undefined-glb/RB Blank.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Silo",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Silo.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Silo House",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Silo House.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Small Barn",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Small Barn.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Tower Windmill",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Tower Windmill.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "trah bag grey",
+    "path": "/3d-models/City Pack.undefined-glb/trah bag grey.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Water Tower",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Water Tower.glb",
+    "category": "Buildings"
+  },
+  {
+    "name": "Adventurer",
+    "path": "/3d-models/City Pack.undefined-glb/Adventurer.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Animated Woman",
+    "path": "/3d-models/City Pack.undefined-glb/Animated Woman.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Animated Woman-nIItLV9nxS",
+    "path": "/3d-models/City Pack.undefined-glb/Animated Woman-nIItLV9nxS.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Animated Woman-qJ2gsTUBHL",
+    "path": "/3d-models/City Pack.undefined-glb/Animated Woman-qJ2gsTUBHL.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Characters Matt",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Characters Matt.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Characters Pug",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Characters Pug.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Characters Sam",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Characters Sam.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Characters Shaun",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Characters Shaun.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Cube Guy Character",
+    "path": "/3d-models/Cube World Kit-glb/Cube Guy Character.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Cube Woman Character",
+    "path": "/3d-models/Cube World Kit-glb/Cube Woman Character.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "German Shepard",
+    "path": "/3d-models/Post Apocolypse Pack-glb/German Shepard.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Lis",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Lis.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Man",
+    "path": "/3d-models/City Pack.undefined-glb/Man.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Manhole Cover",
+    "path": "/3d-models/City Pack.undefined-glb/Manhole Cover.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Steve",
+    "path": "/3d-models/Cube World Kit-glb/Steve.glb",
+    "category": "Characters"
+  },
+  {
+    "name": "Crate",
+    "path": "/3d-models/Cube World Kit-glb/Crate.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Demon",
+    "path": "/3d-models/Cube World Kit-glb/Demon.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Frog",
+    "path": "/3d-models/Animated Enemies-glb/Frog.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Giant",
+    "path": "/3d-models/Cube World Kit-glb/Giant.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Goblin",
+    "path": "/3d-models/Cube World Kit-glb/Goblin.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Rat",
+    "path": "/3d-models/Animated Enemies-glb/Rat.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Skeleton",
+    "path": "/3d-models/Cube World Kit-glb/Skeleton.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Snake",
+    "path": "/3d-models/Animated Enemies-glb/Snake.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Spider",
+    "path": "/3d-models/Animated Enemies-glb/Spider.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Wasp",
+    "path": "/3d-models/Animated Enemies-glb/Wasp.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Yeti",
+    "path": "/3d-models/Cube World Kit-glb/Yeti.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Zombie",
+    "path": "/3d-models/Cube World Kit-glb/Zombie.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Zombie",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Zombie.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Zombie half",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Zombie half.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Zombie-VlXjG0N8Eg",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Zombie-VlXjG0N8Eg.glb",
+    "category": "Creatures"
+  },
+  {
+    "name": "Blood",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Blood.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Blood Splat",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Blood Splat.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Blood Splat-oQDW3k5As5",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Blood Splat-oQDW3k5As5.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Box",
+    "path": "/3d-models/City Pack.undefined-glb/Box.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Cinder Block",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Cinder Block.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Cone",
+    "path": "/3d-models/City Pack.undefined-glb/Cone.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Debris Papers",
+    "path": "/3d-models/City Pack.undefined-glb/Debris Papers.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Dumpster",
+    "path": "/3d-models/City Pack.undefined-glb/Dumpster.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Flower Pot",
+    "path": "/3d-models/City Pack.undefined-glb/Flower Pot.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Flower Pot-Kgt363WkKd",
+    "path": "/3d-models/City Pack.undefined-glb/Flower Pot-Kgt363WkKd.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Pallet",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Pallet.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Pallet Broken",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Pallet Broken.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Pipes",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Pipes.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Plastic Barrier",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Plastic Barrier.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Rock band poster",
+    "path": "/3d-models/City Pack.undefined-glb/Rock band poster.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Traffic Barrier",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Traffic Barrier.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Traffic Barrier-nugx3heueH",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Traffic Barrier-nugx3heueH.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Traffic Cone",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Traffic Cone.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Traffic Cone-VGvQupNGtK",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Traffic Cone-VGvQupNGtK.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Trash Bag",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Trash Bag.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Trash Bags",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Trash Bags.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Trash Can",
+    "path": "/3d-models/City Pack.undefined-glb/Trash Can.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Washing Line",
+    "path": "/3d-models/City Pack.undefined-glb/Washing Line.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Yellow Post-it",
+    "path": "/3d-models/City Pack.undefined-glb/Yellow Post-it.glb",
+    "category": "Decor"
+  },
+  {
+    "name": "Fence",
+    "path": "/3d-models/City Pack.undefined-glb/Fence.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Fence.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence Center",
+    "path": "/3d-models/Cube World Kit-glb/Fence Center.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence Corner",
+    "path": "/3d-models/Cube World Kit-glb/Fence Corner.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence End",
+    "path": "/3d-models/City Pack.undefined-glb/Fence End.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence End",
+    "path": "/3d-models/Cube World Kit-glb/Fence End.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence Piece",
+    "path": "/3d-models/City Pack.undefined-glb/Fence Piece.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence T",
+    "path": "/3d-models/Cube World Kit-glb/Fence T.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Fence-e02PFKKhbr",
+    "path": "/3d-models/Farm Buildings Bundle-glb/Fence-e02PFKKhbr.glb",
+    "category": "Fences"
+  },
+  {
+    "name": "Bench",
+    "path": "/3d-models/City Pack.undefined-glb/Bench.glb",
+    "category": "Furniture"
+  },
+  {
+    "name": "Damaged Couch",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Damaged Couch.glb",
+    "category": "Furniture"
+  },
+  {
+    "name": "Axe",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Axe.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Axe Stone",
+    "path": "/3d-models/Cube World Kit-glb/Axe Stone.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Barrel",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Barrel.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Button",
+    "path": "/3d-models/Cube World Kit-glb/Button.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Chest",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Chest.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Chest Open",
+    "path": "/3d-models/Cube World Kit-glb/Chest Open.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Chest-RfSBvgcZUD",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Chest-RfSBvgcZUD.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Container Green",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Container Green.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Container Red",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Container Red.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Diamond Axe",
+    "path": "/3d-models/Cube World Kit-glb/Diamond Axe.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Diamond Pickaxe",
+    "path": "/3d-models/Cube World Kit-glb/Diamond Pickaxe.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Diamond Shovel",
+    "path": "/3d-models/Cube World Kit-glb/Diamond Shovel.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Gold Axe",
+    "path": "/3d-models/Cube World Kit-glb/Gold Axe.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Gold Sword",
+    "path": "/3d-models/Cube World Kit-glb/Gold Sword.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Guitar",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Guitar.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Key",
+    "path": "/3d-models/Cube World Kit-glb/Key.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Knife",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Knife.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Lever",
+    "path": "/3d-models/Cube World Kit-glb/Lever.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Metal Door",
+    "path": "/3d-models/Cube World Kit-glb/Metal Door.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Pickaxe Gold",
+    "path": "/3d-models/Cube World Kit-glb/Pickaxe Gold.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Pickaxe Wood",
+    "path": "/3d-models/Cube World Kit-glb/Pickaxe Wood.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Pistol",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Pistol.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Rifle",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Rifle.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Shotgun",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Shotgun.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Shovel Gold",
+    "path": "/3d-models/Cube World Kit-glb/Shovel Gold.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Smg",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Smg.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Spear",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Spear.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Stone Pickaxe",
+    "path": "/3d-models/Cube World Kit-glb/Stone Pickaxe.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Stone Shovel",
+    "path": "/3d-models/Cube World Kit-glb/Stone Shovel.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Sword Diamond",
+    "path": "/3d-models/Cube World Kit-glb/Sword Diamond.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Sword Stone",
+    "path": "/3d-models/Cube World Kit-glb/Sword Stone.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wheel",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Wheel.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wheels Stack",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Wheels Stack.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wood Axe",
+    "path": "/3d-models/Cube World Kit-glb/Wood Axe.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wood Chest",
+    "path": "/3d-models/Cube World Kit-glb/Wood Chest.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wood Shovel",
+    "path": "/3d-models/Cube World Kit-glb/Wood Shovel.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wooden Bat Barbed",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Wooden Bat Barbed.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wooden Bat Saw",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Wooden Bat Saw.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Wooden Sword",
+    "path": "/3d-models/Cube World Kit-glb/Wooden Sword.glb",
+    "category": "Items"
+  },
+  {
+    "name": "Bamboo",
+    "path": "/3d-models/Cube World Kit-glb/Bamboo.glb",
     "category": "Nature"
   },
   {
-    "name": "Bush",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Bush.glb",
+    "name": "Bamboo Mid",
+    "path": "/3d-models/Cube World Kit-glb/Bamboo Mid.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Bamboo-xBPj13w3JQ",
+    "path": "/3d-models/Cube World Kit-glb/Bamboo-xBPj13w3JQ.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Big Crystal",
+    "path": "/3d-models/Cube World Kit-glb/Big Crystal.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Birch Trees",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Birch Trees.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Clover",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Clover.glb",
     "category": "Nature"
   },
   {
@@ -785,8 +870,28 @@
     "category": "Nature"
   },
   {
-    "name": "Clover",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Clover.glb",
+    "name": "Crystal",
+    "path": "/3d-models/Cube World Kit-glb/Crystal.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Dead Tree",
+    "path": "/3d-models/Cube World Kit-glb/Dead Tree.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Dead Tree",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Dead Tree.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Dead Tree-4E3IOActVF",
+    "path": "/3d-models/Cube World Kit-glb/Dead Tree-4E3IOActVF.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Dead Tree-9dGXS7GrWc",
+    "path": "/3d-models/Cube World Kit-glb/Dead Tree-9dGXS7GrWc.glb",
     "category": "Nature"
   },
   {
@@ -810,8 +915,13 @@
     "category": "Nature"
   },
   {
-    "name": "Dead Tree",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Dead Tree.glb",
+    "name": "Dead Trees",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Dead Trees.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Dead Trees-F5I0Q7TwO5",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Dead Trees-F5I0Q7TwO5.glb",
     "category": "Nature"
   },
   {
@@ -820,23 +930,28 @@
     "category": "Nature"
   },
   {
-    "name": "Flower Group-LqTljN6Wg2",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Group-LqTljN6Wg2.glb",
-    "category": "Nature"
-  },
-  {
     "name": "Flower Group",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Group.glb",
     "category": "Nature"
   },
   {
-    "name": "Flower Petal-LqvxG9OBOU",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Petal-LqvxG9OBOU.glb",
+    "name": "Flower Group-LqTljN6Wg2",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Group-LqTljN6Wg2.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Flower Petal",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Petal.glb",
     "category": "Nature"
   },
   {
     "name": "Flower Petal-eVE0j49ux9",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Petal-eVE0j49ux9.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Flower Petal-LqvxG9OBOU",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Petal-LqvxG9OBOU.glb",
     "category": "Nature"
   },
   {
@@ -850,8 +965,8 @@
     "category": "Nature"
   },
   {
-    "name": "Flower Petal",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Petal.glb",
+    "name": "Flower Single",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Single.glb",
     "category": "Nature"
   },
   {
@@ -860,18 +975,23 @@
     "category": "Nature"
   },
   {
-    "name": "Flower Single",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Flower Single.glb",
+    "name": "Flowers",
+    "path": "/3d-models/Cube World Kit-glb/Flowers.glb",
     "category": "Nature"
   },
   {
-    "name": "Grass Wispy-Msr9zx66VU",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Grass Wispy-Msr9zx66VU.glb",
+    "name": "Flowers",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Flowers.glb",
     "category": "Nature"
   },
   {
-    "name": "Grass Wispy",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Grass Wispy.glb",
+    "name": "Flowers-0mxlGKYE9P",
+    "path": "/3d-models/Cube World Kit-glb/Flowers-0mxlGKYE9P.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Grass",
+    "path": "/3d-models/Cube World Kit-glb/Grass.glb",
     "category": "Nature"
   },
   {
@@ -880,8 +1000,33 @@
     "category": "Nature"
   },
   {
-    "name": "Mushroom Laetiporus",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Mushroom Laetiporus.glb",
+    "name": "Grass",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Grass.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Grass Small",
+    "path": "/3d-models/Cube World Kit-glb/Grass Small.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Grass Wispy",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Grass Wispy.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Grass Wispy-Msr9zx66VU",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Grass Wispy-Msr9zx66VU.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Maple Trees",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Maple Trees.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Mushroom",
+    "path": "/3d-models/Cube World Kit-glb/Mushroom.glb",
     "category": "Nature"
   },
   {
@@ -890,8 +1035,18 @@
     "category": "Nature"
   },
   {
-    "name": "Pebble Round-KYtJ6JNXh2",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Round-KYtJ6JNXh2.glb",
+    "name": "Mushroom Laetiporus",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Mushroom Laetiporus.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Palm Trees",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Palm Trees.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Pebble Round",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Round.glb",
     "category": "Nature"
   },
   {
@@ -905,13 +1060,18 @@
     "category": "Nature"
   },
   {
+    "name": "Pebble Round-KYtJ6JNXh2",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Round-KYtJ6JNXh2.glb",
+    "category": "Nature"
+  },
+  {
     "name": "Pebble Round-nMf8LHOsbM",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Round-nMf8LHOsbM.glb",
     "category": "Nature"
   },
   {
-    "name": "Pebble Round",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Round.glb",
+    "name": "Pebble Square",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Square.glb",
     "category": "Nature"
   },
   {
@@ -925,13 +1085,13 @@
     "category": "Nature"
   },
   {
-    "name": "Pebble Square-Mm4RMgwNO8",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Square-Mm4RMgwNO8.glb",
+    "name": "Pebble Square-l5XiYQj1oD",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Square-l5XiYQj1oD.glb",
     "category": "Nature"
   },
   {
-    "name": "Pebble Square-l5XiYQj1oD",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Square-l5XiYQj1oD.glb",
+    "name": "Pebble Square-Mm4RMgwNO8",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Square-Mm4RMgwNO8.glb",
     "category": "Nature"
   },
   {
@@ -940,8 +1100,13 @@
     "category": "Nature"
   },
   {
-    "name": "Pebble Square",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pebble Square.glb",
+    "name": "Pine",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pine.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Pine Trees",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Pine Trees.glb",
     "category": "Nature"
   },
   {
@@ -955,23 +1120,23 @@
     "category": "Nature"
   },
   {
-    "name": "Pine-Zt62gceKXZ",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pine-Zt62gceKXZ.glb",
-    "category": "Nature"
-  },
-  {
     "name": "Pine-rfnxJv0Rqa",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pine-rfnxJv0Rqa.glb",
     "category": "Nature"
   },
   {
-    "name": "Pine",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pine.glb",
+    "name": "Pine-Zt62gceKXZ",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Pine-Zt62gceKXZ.glb",
     "category": "Nature"
   },
   {
-    "name": "Plant Big-MbhbP7JrTI",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Plant Big-MbhbP7JrTI.glb",
+    "name": "Plant",
+    "path": "/3d-models/Cube World Kit-glb/Plant.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Plant",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Plant.glb",
     "category": "Nature"
   },
   {
@@ -980,13 +1145,28 @@
     "category": "Nature"
   },
   {
+    "name": "Plant Big-MbhbP7JrTI",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Plant Big-MbhbP7JrTI.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Plant-n31PjUy6Ra",
+    "path": "/3d-models/Cube World Kit-glb/Plant-n31PjUy6Ra.glb",
+    "category": "Nature"
+  },
+  {
     "name": "Plant-xH5gNlQxAZ",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Plant-xH5gNlQxAZ.glb",
     "category": "Nature"
   },
   {
-    "name": "Plant",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Plant.glb",
+    "name": "Rock",
+    "path": "/3d-models/Cube World Kit-glb/Rock.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Rock Medium",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Medium.glb",
     "category": "Nature"
   },
   {
@@ -1000,8 +1180,8 @@
     "category": "Nature"
   },
   {
-    "name": "Rock Medium",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Medium.glb",
+    "name": "Rock Path Round Small",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Path Round Small.glb",
     "category": "Nature"
   },
   {
@@ -1015,11 +1195,6 @@
     "category": "Nature"
   },
   {
-    "name": "Rock Path Round Small",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Path Round Small.glb",
-    "category": "Nature"
-  },
-  {
     "name": "Rock Path Round Thin",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Path Round Thin.glb",
     "category": "Nature"
@@ -1027,6 +1202,11 @@
   {
     "name": "Rock Path Round Wide",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Path Round Wide.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Rock Path Square Smal",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Path Square Smal.glb",
     "category": "Nature"
   },
   {
@@ -1040,11 +1220,6 @@
     "category": "Nature"
   },
   {
-    "name": "Rock Path Square Smal",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Path Square Smal.glb",
-    "category": "Nature"
-  },
-  {
     "name": "Rock Path Square Thin",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Rock Path Square Thin.glb",
     "category": "Nature"
@@ -1055,13 +1230,38 @@
     "category": "Nature"
   },
   {
+    "name": "Rock-Xx1Jkg77vJ",
+    "path": "/3d-models/Cube World Kit-glb/Rock-Xx1Jkg77vJ.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Rocks",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Rocks.glb",
+    "category": "Nature"
+  },
+  {
     "name": "Tall Grass",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Tall Grass.glb",
     "category": "Nature"
   },
   {
-    "name": "Tree-QVOop92WmG",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Tree-QVOop92WmG.glb",
+    "name": "Tree",
+    "path": "/3d-models/City Pack.undefined-glb/Tree.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Tree",
+    "path": "/3d-models/Cube World Kit-glb/Tree.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Tree",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Tree.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Tree-ahBEW2RRgq",
+    "path": "/3d-models/Cube World Kit-glb/Tree-ahBEW2RRgq.glb",
     "category": "Nature"
   },
   {
@@ -1070,8 +1270,18 @@
     "category": "Nature"
   },
   {
+    "name": "Tree-QVOop92WmG",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Tree-QVOop92WmG.glb",
+    "category": "Nature"
+  },
+  {
     "name": "Tree-qZtx0AHhcy",
     "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Tree-qZtx0AHhcy.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Tree-s8XdT4FOZz",
+    "path": "/3d-models/Cube World Kit-glb/Tree-s8XdT4FOZz.glb",
     "category": "Nature"
   },
   {
@@ -1080,8 +1290,13 @@
     "category": "Nature"
   },
   {
-    "name": "Tree",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Tree.glb",
+    "name": "Trees",
+    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Trees.glb",
+    "category": "Nature"
+  },
+  {
+    "name": "Twisted Tree",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Twisted Tree.glb",
     "category": "Nature"
   },
   {
@@ -1105,69 +1320,268 @@
     "category": "Nature"
   },
   {
-    "name": "Twisted Tree",
-    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Twisted Tree.glb",
-    "category": "Nature"
+    "name": "Big arm",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Big arm.glb",
+    "category": "Props"
   },
   {
-    "name": "Birch Trees",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Birch Trees.glb",
-    "category": "Nature"
+    "name": "Rail Corner",
+    "path": "/3d-models/Cube World Kit-glb/Rail Corner.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Rail Incline",
+    "path": "/3d-models/Cube World Kit-glb/Rail Incline.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Rail Straight",
+    "path": "/3d-models/Cube World Kit-glb/Rail Straight.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Road Bits",
+    "path": "/3d-models/City Pack.undefined-glb/Road Bits.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Street Straight",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Street Straight.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Street Straight Crack",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Street Straight Crack.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Street Straight Crack-l7c8pppfFj",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Street Straight Crack-l7c8pppfFj.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Street T",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Street T.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Street Turn",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Street Turn.glb",
+    "category": "Roads"
+  },
+  {
+    "name": "Air conditioner",
+    "path": "/3d-models/City Pack.undefined-glb/Air conditioner.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "ATM",
+    "path": "/3d-models/City Pack.undefined-glb/ATM.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Billboard",
+    "path": "/3d-models/City Pack.undefined-glb/Billboard.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Cross walk",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Cross walk.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Fire Exit",
+    "path": "/3d-models/City Pack.undefined-glb/Fire Exit.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Fire hydrant",
+    "path": "/3d-models/City Pack.undefined-glb/Fire hydrant.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Fire Hydrant",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Fire Hydrant.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Mailbox",
+    "path": "/3d-models/City Pack.undefined-glb/Mailbox.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Power Box",
+    "path": "/3d-models/City Pack.undefined-glb/Power Box.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Roof Exit",
+    "path": "/3d-models/City Pack.undefined-glb/Roof Exit.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Stop sign",
+    "path": "/3d-models/City Pack.undefined-glb/Stop sign.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Street Light",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Street Light.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Town Sign",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Town Sign.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Traffic Light",
+    "path": "/3d-models/City Pack.undefined-glb/Traffic Light.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Traffic Light",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Traffic Light.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Traffic Light-lg9AKWejnF",
+    "path": "/3d-models/Post Apocolypse Pack-glb/Traffic Light-lg9AKWejnF.glb",
+    "category": "Urban"
+  },
+  {
+    "name": "Bicycle",
+    "path": "/3d-models/City Pack.undefined-glb/Bicycle.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Bus",
+    "path": "/3d-models/City Pack.undefined-glb/Bus.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Bus Stop",
+    "path": "/3d-models/City Pack.undefined-glb/Bus Stop.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Bus stop sign",
+    "path": "/3d-models/City Pack.undefined-glb/Bus stop sign.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Bush",
+    "path": "/3d-models/Cube World Kit-glb/Bush.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Bush",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Bush.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Bush with Flowers",
+    "path": "/3d-models/Stylized Nature MegaKit.undefined-glb/Bush with Flowers.glb",
+    "category": "Vehicles"
   },
   {
     "name": "Bushes",
     "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Bushes.glb",
-    "category": "Nature"
+    "category": "Vehicles"
   },
   {
-    "name": "Dead Trees-F5I0Q7TwO5",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Dead Trees-F5I0Q7TwO5.glb",
-    "category": "Nature"
+    "name": "Car",
+    "path": "/3d-models/Cars Bundle-glb/Car.glb",
+    "category": "Vehicles"
   },
   {
-    "name": "Dead Trees",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Dead Trees.glb",
-    "category": "Nature"
+    "name": "Car",
+    "path": "/3d-models/City Pack.undefined-glb/Car.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Car-unqqkULtRU",
+    "path": "/3d-models/Cars Bundle-glb/Car-unqqkULtRU.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Car-unqqkULtRU",
+    "path": "/3d-models/City Pack.undefined-glb/Car-unqqkULtRU.glb",
+    "category": "Vehicles"
   },
   {
     "name": "Flower Bushes",
     "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Flower Bushes.glb",
-    "category": "Nature"
+    "category": "Vehicles"
   },
   {
-    "name": "Flowers",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Flowers.glb",
-    "category": "Nature"
+    "name": "minecart",
+    "path": "/3d-models/Cube World Kit-glb/minecart.glb",
+    "category": "Vehicles"
   },
   {
-    "name": "Grass",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Grass.glb",
-    "category": "Nature"
+    "name": "Motorcycle",
+    "path": "/3d-models/City Pack.undefined-glb/Motorcycle.glb",
+    "category": "Vehicles"
   },
   {
-    "name": "Maple Trees",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Maple Trees.glb",
-    "category": "Nature"
+    "name": "Pickup Truck",
+    "path": "/3d-models/City Pack.undefined-glb/Pickup Truck.glb",
+    "category": "Vehicles"
   },
   {
-    "name": "Palm Trees",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Palm Trees.glb",
-    "category": "Nature"
+    "name": "Planter & Bushes",
+    "path": "/3d-models/City Pack.undefined-glb/Planter & Bushes.glb",
+    "category": "Vehicles"
   },
   {
-    "name": "Pine Trees",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Pine Trees.glb",
-    "category": "Nature"
+    "name": "Police Car",
+    "path": "/3d-models/Cars Bundle-glb/Police Car.glb",
+    "category": "Vehicles"
   },
   {
-    "name": "Rocks",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Rocks.glb",
-    "category": "Nature"
+    "name": "Police Car",
+    "path": "/3d-models/City Pack.undefined-glb/Police Car.glb",
+    "category": "Vehicles"
   },
   {
-    "name": "Trees",
-    "path": "/3d-models/Ultimate Stylized Nature Pack-glb/Trees.glb",
-    "category": "Nature"
+    "name": "Sports Car",
+    "path": "/3d-models/Cars Bundle-glb/Sports Car.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Sports Car",
+    "path": "/3d-models/City Pack.undefined-glb/Sports Car.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Sports Car-1mkmFkAz5v",
+    "path": "/3d-models/Cars Bundle-glb/Sports Car-1mkmFkAz5v.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Sports Car-Gzj704DXdr",
+    "path": "/3d-models/City Pack.undefined-glb/Sports Car-Gzj704DXdr.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "SUV",
+    "path": "/3d-models/Cars Bundle-glb/SUV.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "SUV",
+    "path": "/3d-models/City Pack.undefined-glb/SUV.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Taxi",
+    "path": "/3d-models/Cars Bundle-glb/Taxi.glb",
+    "category": "Vehicles"
+  },
+  {
+    "name": "Van",
+    "path": "/3d-models/City Pack.undefined-glb/Van.glb",
+    "category": "Vehicles"
   }
 ]
-
