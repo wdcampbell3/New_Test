@@ -169,10 +169,14 @@
     // Reset camera position
     camera.position.set(0, 3.0, 0)
 
-    // Reset velocity
+    // Reset velocity and movement state
     velocity.set(0, 0, 0)
     canJump = true
     isJumping = false
+    moveForward = false
+    moveBackward = false
+    moveLeft = false
+    moveRight = false
 
     // Add ground
     const groundGeometry = new THREE.PlaneGeometry(200, 200)
