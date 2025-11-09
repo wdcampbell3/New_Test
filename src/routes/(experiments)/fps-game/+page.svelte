@@ -4,6 +4,7 @@
   import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js"
   import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js"
   import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader.js"
+  import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 
   let container: HTMLDivElement
   let scene: THREE.Scene
@@ -11,6 +12,35 @@
   let renderer: THREE.WebGLRenderer
   let controls: PointerLockControls
   let animationId: number
+
+  // World Builder Map Integration
+  interface MapData {
+    id: string
+    name: string
+    description: string
+    created: number
+    modified: number
+    thumbnail: string
+    environment: {
+      timeOfDay: 'dawn' | 'day' | 'sunset' | 'night'
+      weather: 'clear' | 'rain' | 'snow' | 'fog'
+      fogDensity: number
+    }
+    objects: Array<{
+      modelPath: string
+      position: { x: number, y: number, z: number }
+      rotation: { x: number, y: number, z: number }
+      scale: { x: number, y: number, z: number }
+    }>
+    stats: {
+      objectCount: number
+      polygonCount: number
+    }
+  }
+
+  let availableMaps: MapData[] = []
+  let selectedMap: MapData | null = null
+  let showMapSelector = true
 
   // Game state using standard Svelte reactivity
   let isPlaying = false
@@ -62,11 +92,10 @@
   let audioContext: AudioContext | null = null
 
   onMount(() => {
+    // Load available maps from World Builder
+    loadAvailableMaps()
+
     initScene()
-    createEnvironment()
-    loadCampfire()
-    spawnTargets()
-    spawnEnemies()
     animate()
 
     return () => {
@@ -78,6 +107,173 @@
       }
     }
   })
+
+  function loadAvailableMaps() {
+    const stored = localStorage.getItem('worldBuilder_maps')
+    if (stored) {
+      try {
+        availableMaps = JSON.parse(stored)
+      } catch (e) {
+        console.error('Failed to load maps:', e)
+        availableMaps = []
+      }
+    }
+  }
+
+  async function selectMapAndStart(map: MapData) {
+    selectedMap = map
+    showMapSelector = false
+
+    // Clear existing environment if any
+    clearEnvironment()
+
+    // Load the selected map
+    await loadMapEnvironment(map)
+
+    // Load additional game elements
+    loadCampfire()
+    spawnTargets()
+    spawnEnemies()
+  }
+
+  function startWithDefaultMap() {
+    selectedMap = null
+    showMapSelector = false
+
+    // Use original environment
+    createEnvironment()
+    loadCampfire()
+    spawnTargets()
+    spawnEnemies()
+  }
+
+  function clearEnvironment() {
+    // Remove all existing collidable objects
+    collidableObjects.forEach(obj => scene.remove(obj))
+    collidableObjects = []
+
+    // Remove ground if it exists
+    const existingGround = scene.children.find(child =>
+      child instanceof THREE.Mesh &&
+      child.geometry instanceof THREE.PlaneGeometry
+    )
+    if (existingGround) {
+      scene.remove(existingGround)
+    }
+  }
+
+  async function loadMapEnvironment(map: MapData) {
+    // Apply environment settings
+    updateEnvironmentFromMap(map.environment)
+
+    // Add ground
+    const groundGeometry = new THREE.PlaneGeometry(200, 200)
+    const groundMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2d5016,
+      roughness: 0.8,
+    })
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial)
+    ground.rotation.x = -Math.PI / 2
+    ground.receiveShadow = true
+    scene.add(ground)
+
+    // Load map objects
+    const loader = new GLTFLoader()
+    for (const objData of map.objects) {
+      try {
+        const gltf = await loader.loadAsync(objData.modelPath)
+        const newObject = gltf.scene
+        newObject.position.set(objData.position.x, objData.position.y, objData.position.z)
+        newObject.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z)
+        newObject.scale.set(objData.scale.x, objData.scale.y, objData.scale.z)
+
+        newObject.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+          }
+        })
+
+        scene.add(newObject)
+
+        // Add solid objects to collision detection (skip trees and small decorations)
+        const size = new THREE.Box3().setFromObject(newObject).getSize(new THREE.Vector3())
+        const volume = size.x * size.y * size.z
+
+        // Only add objects larger than a certain size as collidable
+        if (volume > 1) {
+          collidableObjects.push(newObject as any)
+        }
+      } catch (error) {
+        console.error("Failed to load map object:", error)
+      }
+    }
+  }
+
+  function updateEnvironmentFromMap(environment: MapData['environment']) {
+    const skyGradients = {
+      dawn: {
+        colors: ['#1a1a3e', '#6B4E71', '#D4738F', '#FFB56A'],
+        fogColor: 0xFFB56A,
+        ambientIntensity: 0.5,
+        directionalIntensity: 0.7
+      },
+      day: {
+        colors: ['#87CEEB', '#87CEEB', '#B0E0E6', '#F0F8FF'],
+        fogColor: 0xB0E0E6,
+        ambientIntensity: 0.7,
+        directionalIntensity: 1.0
+      },
+      sunset: {
+        colors: ['#1a1a3e', '#6B4E71', '#D4738F', '#FF9A56'],
+        fogColor: 0xff9a56,
+        ambientIntensity: 0.6,
+        directionalIntensity: 0.8
+      },
+      night: {
+        colors: ['#000033', '#000033', '#1a1a3e', '#2d2d5e'],
+        fogColor: 0x1a1a3e,
+        ambientIntensity: 0.3,
+        directionalIntensity: 0.4
+      }
+    }
+
+    const gradient = skyGradients[environment.timeOfDay]
+
+    // Create sky gradient
+    const canvas = document.createElement("canvas")
+    canvas.width = 512
+    canvas.height = 512
+    const context = canvas.getContext("2d")!
+    const canvasGradient = context.createLinearGradient(0, 0, 0, canvas.height)
+    canvasGradient.addColorStop(0, gradient.colors[0])
+    canvasGradient.addColorStop(0.4, gradient.colors[1])
+    canvasGradient.addColorStop(0.7, gradient.colors[2])
+    canvasGradient.addColorStop(1, gradient.colors[3])
+    context.fillStyle = canvasGradient
+    context.fillRect(0, 0, canvas.width, canvas.height)
+
+    const texture = new THREE.CanvasTexture(canvas)
+    scene.background = texture
+
+    // Update fog based on weather
+    let fogDensity = environment.weather === 'fog' ? 100 : 200
+    if (environment.weather === 'rain') fogDensity = 150
+    if (environment.weather === 'snow') fogDensity = 120
+
+    scene.fog = new THREE.Fog(gradient.fogColor, 20, fogDensity)
+
+    // Update lighting
+    const ambientLight = scene.children.find(child => child instanceof THREE.AmbientLight) as THREE.AmbientLight
+    const directionalLight = scene.children.find(child => child instanceof THREE.DirectionalLight) as THREE.DirectionalLight
+
+    if (ambientLight) {
+      ambientLight.intensity = gradient.ambientIntensity
+    }
+    if (directionalLight) {
+      directionalLight.intensity = gradient.directionalIntensity
+    }
+  }
 
   function initScene() {
     // Scene with sunset gradient sky
@@ -1020,7 +1216,56 @@
       bind:this={container}
       class="w-full h-full md:border-r-4 border-base-300 bg-black"
     >
-      {#if !isPlaying}
+      {#if showMapSelector}
+        <div class="absolute inset-0 flex items-center justify-center bg-black/90 z-30 overflow-y-auto p-4">
+          <div class="text-center max-w-4xl w-full">
+            <h2 class="text-4xl font-bold text-white mb-6">Select a Map</h2>
+
+            {#if availableMaps.length === 0}
+              <div class="bg-base-200 p-8 rounded-lg mb-4">
+                <p class="text-lg mb-4">No World Builder maps found.</p>
+                <p class="text-sm text-gray-400 mb-4">
+                  Create maps in World Builder first, then play them here!
+                </p>
+                <button class="btn btn-primary btn-lg" on:click={startWithDefaultMap}>
+                  Play Default Map
+                </button>
+              </div>
+            {:else}
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 max-h-96 overflow-y-auto">
+                {#each availableMaps as map}
+                  <button
+                    class="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
+                    on:click={() => selectMapAndStart(map)}
+                  >
+                    <div class="card-body p-4">
+                      {#if map.thumbnail}
+                        <img
+                          src={map.thumbnail}
+                          alt={map.name}
+                          class="w-full h-32 object-cover rounded mb-2"
+                        />
+                      {/if}
+                      <h3 class="font-bold text-lg">{map.name}</h3>
+                      <div class="text-xs text-gray-400">
+                        {map.stats.objectCount} objects • {map.environment.timeOfDay} • {map.environment.weather}
+                      </div>
+                    </div>
+                  </button>
+                {/each}
+              </div>
+
+              <button class="btn btn-outline btn-lg" on:click={startWithDefaultMap}>
+                Play Default Map Instead
+              </button>
+            {/if}
+
+            <p class="text-white mt-6 text-sm">
+              Controls: WASD to move, Mouse to look, Click to shoot, Space to jump, ESC to pause
+            </p>
+          </div>
+        </div>
+      {:else if !isPlaying}
         <div
           class="absolute inset-0 flex items-center justify-center bg-black/70 z-10"
         >
@@ -1073,6 +1318,17 @@
   <!-- Info Panel -->
   <div class="w-full md:w-80 h-auto md:h-screen p-4 bg-base-200 overflow-y-auto">
     <h1 class="text-2xl md:text-4xl font-bold mb-4 md:mb-6">🎯 Blocky Shooter</h1>
+
+    {#if selectedMap}
+      <div class="alert alert-info mb-4 text-xs md:text-sm">
+        <div>
+          <div class="font-bold">Playing: {selectedMap.name}</div>
+          <div class="text-xs opacity-70">
+            {selectedMap.environment.timeOfDay} • {selectedMap.environment.weather}
+          </div>
+        </div>
+      </div>
+    {/if}
 
     <div class="stats stats-horizontal md:stats-vertical w-full mb-4 md:mb-6">
       <div class="stat bg-base-100">
