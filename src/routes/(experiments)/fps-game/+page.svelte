@@ -49,7 +49,7 @@
   let health = 100
 
   // Movement
-  const moveSpeed = 1.0 // Increased from 0.2 to 1.0
+  const moveSpeed = 2.0 // Doubled for faster movement
   const jumpSpeed = 16.0 // Increased to jump twice as high
   let velocity = new THREE.Vector3()
   let direction = new THREE.Vector3()
