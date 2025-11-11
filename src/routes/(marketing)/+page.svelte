@@ -46,6 +46,13 @@
 
   const games3D = [
     {
+      name: "🏗️ World Builder",
+      path: "/world-builder",
+      description: "Create and explore custom 3D worlds with your own designs",
+      image:
+        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop",
+    },
+    {
       name: "🎯 Blocky Shooter",
       path: "/fps-game",
       description: "First-person shooter with destructible environments",

@@ -1407,6 +1407,15 @@
   }
 </script>
 
+<style>
+  /* Ensure canvas stays within its container */
+  canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+  }
+</style>
+
 <svelte:head>
   <title>World Builder | Dougie's Game Hub</title>
 </svelte:head>
@@ -1688,10 +1697,10 @@
         type="button"
         class="tab {activeTab === 'models' ? 'tab-active' : ''}"
         style="pointer-events: auto; cursor: pointer;"
-        onmousedown={(e) => {
+        onclick={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          console.log('Models tab mousedown')
+          console.log('Models tab clicked')
           activeTab = 'models'
         }}
       >
@@ -1701,10 +1710,10 @@
         type="button"
         class="tab {activeTab === 'maps' ? 'tab-active' : ''}"
         style="pointer-events: auto; cursor: pointer;"
-        onmousedown={(e) => {
+        onclick={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          console.log('Maps tab mousedown')
+          console.log('Maps tab clicked')
           activeTab = 'maps'
         }}
       >
@@ -1714,10 +1723,10 @@
         type="button"
         class="tab {activeTab === 'options' ? 'tab-active' : ''}"
         style="pointer-events: auto; cursor: pointer;"
-        onmousedown={(e) => {
+        onclick={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          console.log('Options tab mousedown')
+          console.log('Options tab clicked')
           activeTab = 'options'
         }}
       >

@@ -11,8 +11,8 @@
   ]
 
   const experiments3D = [
-    { name: "Blocky Shooter", path: "/fps-game", icon: "🎯" },
     { name: "World Builder", path: "/world-builder", icon: "🏗️" },
+    { name: "Blocky Shooter", path: "/fps-game", icon: "🎯" },
   ]
 </script>
 
