@@ -2831,7 +2831,7 @@
           <div
             class="absolute top-4 left-4 text-white font-bold z-10 bg-black/70 p-4 rounded-lg space-y-2"
           >
-            <div class="text-3xl text-primary">Score: {score}</div>
+            <div class="text-3xl text-white">Score: {score}</div>
             <div class="text-xl">Level: {level}</div>
             <div class="text-xl text-accent">Health: {health}</div>
 
