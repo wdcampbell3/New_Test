@@ -118,6 +118,14 @@
   let level = 1
   let health = gameConfig.startingHealth
   let lastEscapeTime = 0 // Track ESC key presses
+  let isBossLevel = false // Track if current level is a boss level
+  let bossEnemy: Enemy | null = null // Reference to the boss enemy
+  let bossHealth = 0 // Reactive boss health for HUD
+  let bossMaxHealth = 0 // Reactive boss max health for HUD
+  let sceneryObjects: THREE.Group[] = [] // Track generated scenery for cleanup
+  let nextLevelScore = 1000 // Track when next level should trigger
+  let showLevelComplete = false // Show level complete splash screen
+  let isLoadingLevel = false // Track if we're loading a new level
 
   // Movement
   const moveSpeed = 2.0 // Doubled for faster movement
@@ -158,12 +166,13 @@
   // Active power-ups
   let activePowerUps: Set<string> = new Set()
   let flyingModeEndTime = 0
+  let currentTime = Date.now() // For reactive countdown updates
 
   // Simplified power-up application - no inventory, instant effects
   function applyPowerUpEffect(type: PowerUp['type']) {
     switch (type) {
       case 'health':
-        health = Math.min(health + 30, gameConfig.startingHealth + 50)
+        health = Math.min(health + 30, 100) // Cap at 100
         break
       case 'ammo':
         // Add ammo to current weapon (if it's not laser with infinite ammo)
@@ -184,7 +193,7 @@
         break
       case 'flying':
         activePowerUps.add('flying')
-        flyingModeEndTime = Date.now() + 60000 // 60 seconds (1 minute)
+        flyingModeEndTime = Date.now() + 30000 // 30 seconds
         velocity.y = 10 // Launch 2/3 as high (was 15)
         break
       case 'weapon-missile':
@@ -196,33 +205,218 @@
     }
   }
 
-  // Level progression
-  $: if (score > 0 && score % 500 === 0 && score / 500 === level) {
+  // Level progression - advance every 1000 points
+  $: if (score >= nextLevelScore) {
     levelUp()
   }
 
-  function levelUp() {
+  async function levelUp() {
+    if (isLoadingLevel) return // Prevent multiple simultaneous level ups
+    isLoadingLevel = true
+
+    // Show level complete splash (before incrementing level so it shows correct number)
+    showLevelComplete = true
+    await new Promise(resolve => setTimeout(resolve, 2500)) // Show splash for 2.5 seconds
+    showLevelComplete = false
+
     level++
+    nextLevelScore = level * 1000 // Set next level threshold
+
+    // Check if this is a boss level (every 3rd level)
+    isBossLevel = (level % 3 === 0)
+
+    // Clear EVERYTHING from the scene
+    clearEnvironment()
+
+    // Clear scenery objects array
+    sceneryObjects.forEach(obj => scene.remove(obj))
+    sceneryObjects = []
+    bossEnemy = null
+    bossHealth = 0
+    bossMaxHealth = 0
+
+    // Reset player position to ground level
+    camera.position.y = 6.0 // Eye level height
+    velocity.set(0, 0, 0)
+    canJump = true
 
     // Increase difficulty
     gameConfig.enemyCount = Math.min(gameConfig.enemyCount + 2, 20)
-    gameConfig.enemySpeed = gameConfig.enemySpeed * 1.1
-    gameConfig.enemyFireRate = Math.max(gameConfig.enemyFireRate * 0.9, 800)
+    gameConfig.enemySpeed = gameConfig.enemySpeed * 1.05
+    gameConfig.enemyFireRate = Math.max(gameConfig.enemyFireRate * 0.95, 800)
     gameConfig.targetCount = Math.min(gameConfig.targetCount + 2, 30)
 
     // Reward player with health
-    health = Math.min(health + 50, gameConfig.startingHealth + 100)
+    health = Math.min(health + 50, 100) // Cap at 100
 
-    // Spawn new enemies
-    const newEnemiesToSpawn = 2
-    for (let i = 0; i < newEnemiesToSpawn; i++) {
-      spawnNewEnemy()
+    // Add ground plane
+    const groundGeometry = new THREE.PlaneGeometry(200, 200)
+    const groundMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2d5016,
+      roughness: 0.8,
+    })
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial)
+    ground.rotation.x = -Math.PI / 2
+    ground.receiveShadow = true
+    scene.add(ground)
+
+    // Generate new scenery for the level
+    await generateLevelScenery()
+
+    // Spawn enemies or boss
+    if (isBossLevel) {
+      // Boss level - spawn one boss
+      spawnBoss()
+    } else {
+      // Normal level - spawn regular enemies
+      const newEnemiesToSpawn = Math.min(gameConfig.enemyCount, 15)
+      for (let i = 0; i < newEnemiesToSpawn; i++) {
+        spawnNewEnemy()
+      }
     }
 
     // Spawn more power-ups
     for (let i = 0; i < 3; i++) {
       spawnNewPowerUp()
     }
+
+    isLoadingLevel = false
+  }
+
+  // Generate scenery for the level (simplified version of World Builder auto-generate)
+  async function generateLevelScenery() {
+    if (modelCatalog.length === 0) return
+
+    // Categorize models (same as World Builder)
+    const trees = modelCatalog.filter(m =>
+      m.category === 'Nature' && (
+        m.name.toLowerCase().includes('tree') ||
+        m.name.toLowerCase().includes('pine') ||
+        m.name.toLowerCase().includes('oak')
+      )
+    )
+    const buildings = modelCatalog.filter(m =>
+      m.category === 'Buildings' ||
+      m.name.toLowerCase().includes('building') ||
+      m.name.toLowerCase().includes('house') ||
+      m.name.toLowerCase().includes('tower')
+    )
+    const vehicles = modelCatalog.filter(m =>
+      m.category === 'Vehicles'
+    )
+    const other = modelCatalog.filter(m =>
+      m.category === 'Decor' || m.category === 'Urban' || m.category === 'Props'
+    )
+
+    const loader = new GLTFLoader()
+
+    // Helper to place model
+    const placeModel = async (model: ModelCatalogItem, position: THREE.Vector3, baseScale: number) => {
+      try {
+        const gltf = await loader.loadAsync(model.path)
+        const mesh = gltf.scene
+        mesh.position.copy(position)
+        mesh.rotation.y = Math.random() * Math.PI * 2
+
+        // Calculate initial size
+        const bbox = new THREE.Box3().setFromObject(mesh)
+        const size = bbox.getSize(new THREE.Vector3())
+        const maxDim = Math.max(size.x, size.y, size.z)
+
+        // Scale to reasonable size based on object type
+        let targetSize = baseScale
+        const category = categorizeModel(model.path)
+
+        // Adjust scale based on model size to normalize proportions
+        if (maxDim > 0) {
+          const scaleFactor = targetSize / maxDim
+          mesh.scale.setScalar(scaleFactor)
+        } else {
+          mesh.scale.setScalar(1)
+        }
+
+        mesh.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+          }
+        })
+
+        scene.add(mesh)
+        sceneryObjects.push(mesh)
+
+        // Add to collision detection based on category
+        if (category === 'solid') {
+          solidObjects.push(mesh)
+        } else {
+          walkthroughObjects.push(mesh)
+        }
+      } catch (error) {
+        console.error('Failed to load scenery model:', model.path, error)
+      }
+    }
+
+    // Place trees (10-15) - target size 3-5 units tall
+    const treeCount = 10 + Math.floor(Math.random() * 6)
+    for (let i = 0; i < treeCount && trees.length > 0; i++) {
+      const model = trees[Math.floor(Math.random() * trees.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80)
+      await placeModel(model, pos, 3.5 + Math.random() * 1.5)
+    }
+
+    // Place buildings (3-5 in a loose circle) - target size 8-12 units
+    const buildingCount = 3 + Math.floor(Math.random() * 3)
+    for (let i = 0; i < buildingCount && buildings.length > 0; i++) {
+      const model = buildings[Math.floor(Math.random() * buildings.length)]
+      const angle = (i / buildingCount) * Math.PI * 2
+      const radius = 30 + Math.random() * 20
+      const pos = new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
+      await placeModel(model, pos, 10 + Math.random() * 2)
+    }
+
+    // Place vehicles (2-4) - target size 3-4 units
+    const vehicleCount = 2 + Math.floor(Math.random() * 3)
+    for (let i = 0; i < vehicleCount && vehicles.length > 0; i++) {
+      const model = vehicles[Math.floor(Math.random() * vehicles.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60)
+      await placeModel(model, pos, 3.5 + Math.random() * 0.5)
+    }
+
+    // Sprinkle other objects (5-10) - target size 1-3 units
+    const otherCount = 5 + Math.floor(Math.random() * 6)
+    for (let i = 0; i < otherCount && other.length > 0; i++) {
+      const model = other[Math.floor(Math.random() * other.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 70, 0, (Math.random() - 0.5) * 70)
+      await placeModel(model, pos, 2.0 + Math.random() * 1.0)
+    }
+  }
+
+  // Spawn boss enemy
+  function spawnBoss() {
+    const mesh = createEnemyModel('boss')
+
+    // Spawn boss in a dramatic location (center of map, elevated)
+    mesh.position.set(0, 0, -40) // In front of player
+
+    scene.add(mesh)
+
+    const stats = getEnemyStats('boss')
+    const boss: Enemy = {
+      mesh,
+      health: stats.health,
+      maxHealth: stats.health,
+      lastShot: Date.now(),
+      velocity: new THREE.Vector3(),
+      type: 'boss',
+      speed: stats.speed,
+      fireRate: stats.fireRate,
+      damage: stats.damage
+    }
+
+    enemies.push(boss)
+    bossEnemy = boss
+    bossHealth = boss.health
+    bossMaxHealth = boss.maxHealth
   }
 
   // Weapons and Projectiles
@@ -250,7 +444,7 @@
   let projectiles: Projectile[] = []
 
   // Enemies
-  type EnemyType = 'basic' | 'fast' | 'tank'
+  type EnemyType = 'basic' | 'fast' | 'tank' | 'boss'
 
   interface Enemy {
     mesh: THREE.Object3D
@@ -366,6 +560,11 @@
     score = 0
     level = 1
     health = gameConfig.startingHealth
+    nextLevelScore = 1000
+    isBossLevel = false
+    bossEnemy = null
+    bossHealth = 0
+    bossMaxHealth = 0
   }
 
   function findValidSpawnPosition(): THREE.Vector3 | null {
@@ -1639,6 +1838,66 @@
       turret.position.y = 2.2
       turret.castShadow = true
       enemyGroup.add(turret)
+    } else if (type === 'boss') {
+      // BOSS enemy - HUGE, intimidating, DARK PURPLE/BLACK with glowing accents
+      const bodyGeometry = new THREE.DodecahedronGeometry(3, 0)
+      const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: 0x4400aa,
+        emissive: 0x8800ff,
+        emissiveIntensity: 0.8,
+        metalness: 0.9,
+        roughness: 0.3,
+      })
+      const body = new THREE.Mesh(bodyGeometry, bodyMaterial)
+      body.position.y = 4
+      body.castShadow = true
+      enemyGroup.add(body)
+
+      // Massive glowing core
+      const coreGeometry = new THREE.SphereGeometry(1.5, 32, 32)
+      const coreMaterial = new THREE.MeshStandardMaterial({
+        color: 0xff00ff,
+        emissive: 0xff00ff,
+        emissiveIntensity: 1.5,
+      })
+      const core = new THREE.Mesh(coreGeometry, coreMaterial)
+      core.position.y = 4
+      enemyGroup.add(core)
+
+      // Multiple orbiting rings
+      for (let i = 0; i < 3; i++) {
+        const ringGeometry = new THREE.TorusGeometry(2.5 + i * 0.5, 0.2, 12, 24)
+        const ringMaterial = new THREE.MeshStandardMaterial({
+          color: 0xff00aa,
+          emissive: 0xff0088,
+          emissiveIntensity: 0.6,
+        })
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial)
+        ring.position.y = 4
+        ring.rotation.x = (Math.PI / 4) * i
+        ring.rotation.y = (Math.PI / 3) * i
+        ring.castShadow = true
+        enemyGroup.add(ring)
+      }
+
+      // Spiky protrusions for menacing look
+      for (let i = 0; i < 8; i++) {
+        const spikeGeometry = new THREE.ConeGeometry(0.4, 2, 8)
+        const spikeMaterial = new THREE.MeshStandardMaterial({
+          color: 0x660099,
+          emissive: 0x440066,
+          emissiveIntensity: 0.5,
+        })
+        const spike = new THREE.Mesh(spikeGeometry, spikeMaterial)
+        const angle = (i / 8) * Math.PI * 2
+        spike.position.x = Math.cos(angle) * 3.5
+        spike.position.z = Math.sin(angle) * 3.5
+        spike.position.y = 4
+        spike.rotation.z = Math.PI / 2
+        spike.rotation.y = angle
+        spike.castShadow = true
+        enemyGroup.add(spike)
+      }
     }
 
     return enemyGroup
@@ -1659,12 +1918,19 @@
         fireRate: gameConfig.enemyFireRate * 1.5,
         damage: gameConfig.enemyDamage * 0.7
       }
-    } else { // tank
+    } else if (type === 'tank') {
       return {
         health: 100,
         speed: gameConfig.enemySpeed * 0.5,
         fireRate: gameConfig.enemyFireRate * 0.7,
         damage: gameConfig.enemyDamage * 1.5
+      }
+    } else { // boss
+      return {
+        health: 1000 + (level * 200), // Scales with level - much more health
+        speed: gameConfig.enemySpeed * 0.5, // Slower movement
+        fireRate: gameConfig.enemyFireRate * 0.25, // Fires MUCH more frequently (lower = faster)
+        damage: gameConfig.enemyDamage * 3 // Triple damage
       }
     }
   }
@@ -1996,19 +2262,31 @@
             scene.remove(projectile.mesh)
 
             // Damage all enemies in radius
+            const enemiesToRemove: number[] = []
             enemies.forEach((e, idx) => {
               const dist = e.mesh.position.distanceTo(projectile.mesh.position)
               if (dist < 5) {
                 e.health -= gameConfig.playerDamage * 2 // Double damage for grenades
 
+                // Update boss health display if this is the boss
+                if (e.type === 'boss' && bossEnemy) {
+                  bossHealth = e.health
+                }
+
                 if (e.health <= 0) {
                   createExplosion(e.mesh.position.clone())
                   scene.remove(e.mesh)
-                  enemies.splice(idx, 1)
-                  score += 50
+                  enemiesToRemove.push(idx)
 
-                  if (enemies.length < gameConfig.enemyCount) {
-                    spawnNewEnemy()
+                  const wasBoss = e.type === 'boss'
+                  score += wasBoss ? 500 : 50
+
+                  // If boss was killed, complete the level
+                  if (wasBoss && bossEnemy) {
+                    bossEnemy = null
+                    bossHealth = 0
+                    isBossLevel = false
+                    setTimeout(() => levelUp(), 500) // Small delay for explosion
                   }
                 } else {
                   // Show damage
@@ -2017,21 +2295,44 @@
               }
             })
 
+            // Remove dead enemies (in reverse to avoid index issues)
+            enemiesToRemove.reverse().forEach(idx => enemies.splice(idx, 1))
+
+            // Spawn new enemies if needed (but not on boss levels)
+            if (!isBossLevel && enemies.length < gameConfig.enemyCount) {
+              spawnNewEnemy()
+            }
+
             return false // Remove grenade
           }
 
           // Regular projectile damage
           enemy.health -= gameConfig.playerDamage
 
+          // Update boss health display if this is the boss
+          if (enemy.type === 'boss' && bossEnemy) {
+            bossHealth = enemy.health
+          }
+
           if (enemy.health <= 0) {
             // Enemy destroyed
             createExplosion(enemy.mesh.position.clone())
             scene.remove(enemy.mesh)
-            enemies.splice(i, 1)
-            score += 50
 
-            // Spawn new enemy
-            if (enemies.length < gameConfig.enemyCount) {
+            // Check if this was the boss
+            const wasBoss = enemy.type === 'boss'
+
+            enemies.splice(i, 1)
+            score += wasBoss ? 500 : 50 // Big score bonus for boss
+
+            // If boss was killed, complete the level
+            if (wasBoss && bossEnemy) {
+              bossEnemy = null
+              bossHealth = 0
+              isBossLevel = false
+              levelUp()
+            } else if (enemies.length < gameConfig.enemyCount) {
+              // Spawn new enemy (only if not boss level)
               spawnNewEnemy()
             }
           } else {
@@ -2050,23 +2351,43 @@
         scene.remove(projectile.mesh)
 
         // Damage enemies in radius
+        const enemiesToRemove: number[] = []
         enemies.forEach((e, idx) => {
           const dist = e.mesh.position.distanceTo(projectile.mesh.position)
           if (dist < 5) {
             e.health -= gameConfig.playerDamage * 2
 
+            // Update boss health display if this is the boss
+            if (e.type === 'boss' && bossEnemy) {
+              bossHealth = e.health
+            }
+
             if (e.health <= 0) {
               createExplosion(e.mesh.position.clone())
               scene.remove(e.mesh)
-              enemies.splice(idx, 1)
-              score += 50
+              enemiesToRemove.push(idx)
 
-              if (enemies.length < gameConfig.enemyCount) {
-                spawnNewEnemy()
+              const wasBoss = e.type === 'boss'
+              score += wasBoss ? 500 : 50
+
+              // If boss was killed, complete the level
+              if (wasBoss && bossEnemy) {
+                bossEnemy = null
+                bossHealth = 0
+                isBossLevel = false
+                setTimeout(() => levelUp(), 500) // Small delay for explosion
               }
             }
           }
         })
+
+        // Remove dead enemies (in reverse to avoid index issues)
+        enemiesToRemove.reverse().forEach(idx => enemies.splice(idx, 1))
+
+        // Spawn new enemies if needed (but not on boss levels)
+        if (!isBossLevel && enemies.length < gameConfig.enemyCount) {
+          spawnNewEnemy()
+        }
 
         return false
       }
@@ -2525,6 +2846,9 @@
   function animate() {
     animationId = requestAnimationFrame(animate)
 
+    // Update current time for reactive countdown displays
+    currentTime = Date.now()
+
     // Clamp delta to prevent huge velocity spikes when tab regains focus
     const rawDelta = clock.getDelta()
     const delta = Math.min(rawDelta, 0.1) // Max 100ms per frame
@@ -2832,8 +3156,21 @@
             class="absolute top-4 left-4 text-white font-bold z-10 bg-black/70 p-4 rounded-lg space-y-2"
           >
             <div class="text-3xl text-white">Score: {score}</div>
-            <div class="text-xl">Level: {level}</div>
+            <div class="text-xl">Level: {level} {#if isBossLevel}<span class="text-error animate-pulse">⚡ BOSS LEVEL ⚡</span>{/if}</div>
             <div class="text-xl text-accent">Health: {health}</div>
+
+            {#if isBossLevel && bossEnemy && bossMaxHealth > 0}
+              <div class="mt-3 pt-3 border-t border-red-500">
+                <div class="text-sm text-red-400 mb-1">BOSS HEALTH</div>
+                <div class="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+                  <div
+                    class="bg-gradient-to-r from-red-500 to-purple-500 h-full transition-all duration-300"
+                    style="width: {Math.max(0, (bossHealth / bossMaxHealth) * 100)}%"
+                  ></div>
+                </div>
+                <div class="text-xs text-center mt-1">{Math.max(0, Math.floor(bossHealth))} / {bossMaxHealth}</div>
+              </div>
+            {/if}
 
             <!-- Weapon Inventory -->
             <div class="mt-3 pt-3 border-t border-white/30">
@@ -2844,20 +3181,45 @@
                 </div>
               {/each}
             </div>
+          </div>
 
-            {#if activePowerUps.has('flying')}
-              <div class="mt-3 pt-3 border-t border-white/30">
-                <div class="text-lg font-bold text-cyan-400 animate-pulse">
-                  🚀 JETPACK ACTIVE
+          <!-- Jetpack HUD (Below main HUD on left side) -->
+          {#if activePowerUps.has('flying') && currentTime < flyingModeEndTime}
+            <div class="absolute left-4 z-10 bg-black/90 p-4 rounded-lg border-2 border-cyan-500 w-64" style="top: 280px;">
+              <div class="text-xl font-bold text-cyan-400 animate-pulse mb-2 text-center">
+                🚀 JETPACK ACTIVE
+              </div>
+              <div class="text-4xl font-bold text-yellow-300 mb-3 text-center">
+                {Math.max(0, Math.ceil((flyingModeEndTime - currentTime) / 1000))}s
+              </div>
+              <!-- Visual countdown bar -->
+              <div class="w-full bg-gray-700 h-4 rounded-full overflow-hidden mb-1">
+                <div
+                  class="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 h-full transition-all duration-100"
+                  style="width: {Math.max(0, Math.min(100, ((flyingModeEndTime - currentTime) / 30000) * 100))}%"
+                ></div>
+              </div>
+              <div class="text-xs text-center text-cyan-300 font-bold">FUEL REMAINING</div>
+            </div>
+          {/if}
+
+          <!-- Level Complete Splash -->
+          {#if showLevelComplete}
+            <div class="absolute inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+              <div class="text-center text-white animate-bounce">
+                <div class="text-8xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+                  LEVEL {level}
                 </div>
-                <div class="text-2xl font-bold text-yellow-300">
-                  {Math.max(0, Math.ceil((flyingModeEndTime - Date.now()) / 1000))}s
+                <div class="text-6xl font-bold mb-4 text-green-400">
+                  COMPLETE!
+                </div>
+                <div class="text-3xl mb-2">Score: {score}</div>
+                <div class="text-2xl text-cyan-400 animate-pulse">
+                  {isBossLevel ? '⚡ BOSS LEVEL NEXT ⚡' : 'Loading Next Level...'}
                 </div>
               </div>
-            {/if}
-
-
-          </div>
+            </div>
+          {/if}
 
           <!-- Crosshair -->
           <div
