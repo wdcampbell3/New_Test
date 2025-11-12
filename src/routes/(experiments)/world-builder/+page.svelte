@@ -42,6 +42,7 @@
   let animationsEnabled = $state(false)
   let hasMouseMoved = $state(false) // Track if mouse moved during click
   let mouseDownPosition = { x: 0, y: 0 } // Track mouse position on down
+  let previewHasBeenPositioned = $state(false) // Track if preview mesh has been positioned by mouse
 
   // Maps Management
   interface MapData {
@@ -77,6 +78,12 @@
   let polygonCount = $state(0)
   const MAX_POLYGON_WARNING = 100000
 
+  // Auto-generate settings
+  let autoGenTrees = $state(8)
+  let autoGenBuildings = $state(8)
+  let autoGenVehicles = $state(8)
+  let autoGenAnimals = $state(8)
+
   // First-person mode (POV Mode)
   let isFirstPersonMode = $state(false)
   let isPOVPaused = $state(false) // Track if POV mode is paused
@@ -91,6 +98,14 @@
   const GRAVITY = -20 // Gravity acceleration
   const JUMP_VELOCITY = 8 // Initial upward velocity for jump
   const GROUND_LEVEL = 1.65 // Eye height above ground (matches animated woman model)
+
+  // Stuck detection for POV mode
+  let lastPOVPosition = new THREE.Vector3()
+  let stuckCheckTimer = 0
+  let stuckCounter = 0
+  const STUCK_CHECK_INTERVAL = 1000 // Check every second
+  const STUCK_THRESHOLD = 0.1 // Minimum distance to consider movement
+  const STUCK_COUNT_LIMIT = 2 // How many checks before unstuck action
 
   // Animation mixers for animated models
   interface AnimatedObject {
@@ -111,6 +126,9 @@
   }
   let thumbnails = $state<Map<string, string>>(new Map())
   let thumbnailsLoading = $state(true)
+  const THUMBNAIL_CACHE_KEY = 'worldBuilder_thumbnailCache'
+  const THUMBNAIL_VERSION_KEY = 'worldBuilder_thumbnailVersion'
+  const CURRENT_THUMBNAIL_VERSION = '1.0' // Increment to invalidate cache
 
   // Undo/Redo history
   interface HistoryState {
@@ -421,11 +439,17 @@
       previewMesh.position.set(point.x, 0, point.z)
       previewMesh.rotation.y = currentRotation
       previewMesh.scale.set(currentScale, currentScale, currentScale)
+
+      // Mark that preview has been positioned
+      previewHasBeenPositioned = true
     }
   }
 
   async function selectModel(model: ModelInfo) {
     selectedModel = model
+
+    // Reset preview positioning flag
+    previewHasBeenPositioned = false
 
     // Remove old preview
     if (previewMesh) {
@@ -541,6 +565,9 @@
 
     // Place new object if a model is selected
     if (!selectedModel || !previewMesh) return
+
+    // Don't place if preview hasn't been positioned yet
+    if (!previewHasBeenPositioned) return
 
     const loader = new GLTFLoader()
     try {
@@ -961,6 +988,174 @@
     input.click()
   }
 
+  // Validate spawn position to ensure player is not stuck
+  function validateSpawnPosition(position: THREE.Vector3): boolean {
+    const raycaster = new THREE.Raycaster()
+    const directions = [
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(-1, 0, 0),
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(0, 0, -1),
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(0, -1, 0),
+    ]
+
+    // Check for obstacles in all directions
+    for (const direction of directions) {
+      raycaster.set(position, direction)
+      const intersects = raycaster.intersectObjects(
+        placedObjects.map(obj => obj.mesh),
+        true
+      )
+
+      // If obstacle is too close (within 3 units), position is invalid
+      if (intersects.length > 0 && intersects[0].distance < 3) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  // Auto generate map with smart object placement
+  async function autoGenerateMap() {
+    if (!confirm('This will clear the current map and generate a new one. Continue?')) {
+      return
+    }
+
+    if (modelCatalog.length === 0) {
+      alert('No models available in the catalog!')
+      return
+    }
+
+    // Clear existing objects
+    placedObjects.forEach(obj => {
+      scene.remove(obj.mesh)
+      if (obj.mixer) {
+        const index = animatedObjects.findIndex(a => a.mesh === obj.mesh)
+        if (index !== -1) {
+          animatedObjects.splice(index, 1)
+        }
+      }
+    })
+    placedObjects = []
+
+    // Categorize models
+    const trees = modelCatalog.filter(m =>
+      m.name.toLowerCase().includes('tree') ||
+      m.name.toLowerCase().includes('pine') ||
+      m.name.toLowerCase().includes('oak')
+    )
+    const buildings = modelCatalog.filter(m =>
+      m.name.toLowerCase().includes('building') ||
+      m.name.toLowerCase().includes('house') ||
+      m.name.toLowerCase().includes('tower')
+    )
+    const vehicles = modelCatalog.filter(m =>
+      m.name.toLowerCase().includes('car') ||
+      m.name.toLowerCase().includes('truck') ||
+      m.name.toLowerCase().includes('vehicle')
+    )
+    const animals = modelCatalog.filter(m =>
+      m.name.toLowerCase().includes('animal') ||
+      m.name.toLowerCase().includes('dog') ||
+      m.name.toLowerCase().includes('cat') ||
+      m.name.toLowerCase().includes('bird')
+    )
+    const other = modelCatalog.filter(m =>
+      !trees.includes(m) && !buildings.includes(m) &&
+      !vehicles.includes(m) && !animals.includes(m)
+    )
+
+    const newObjects: Array<{ mesh: THREE.Group, modelPath: string, rotation: number, scale: number, mixer: THREE.AnimationMixer | null }> = []
+    const loader = new GLTFLoader()
+
+    // Helper to place object
+    const placeModel = async (model: any, position: THREE.Vector3, scale: number) => {
+      try {
+        const gltf = await new Promise<any>((resolve, reject) => {
+          loader.load(model.path, (gltf) => resolve(gltf), undefined, (error) => reject(error))
+        })
+
+        const mesh = gltf.scene
+        mesh.position.copy(position)
+        mesh.rotation.y = Math.random() * Math.PI * 2
+        mesh.scale.setScalar(scale)
+        mesh.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+          }
+        })
+
+        scene.add(mesh)
+
+        let mixer: THREE.AnimationMixer | null = null
+        if (gltf.animations && gltf.animations.length > 0 && animationsEnabled) {
+          mixer = new THREE.AnimationMixer(mesh)
+          const action = mixer.clipAction(gltf.animations[0])
+          action.play()
+          animatedObjects = [...animatedObjects, { mesh, mixer }]
+        }
+
+        newObjects.push({ mesh, modelPath: model.path, rotation: mesh.rotation.y, scale, mixer })
+      } catch (error) {
+        console.error('Failed to load model:', model.path, error)
+      }
+    }
+
+    // Place trees
+    for (let i = 0; i < autoGenTrees && trees.length > 0; i++) {
+      const model = trees[Math.floor(Math.random() * trees.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 150, 0, (Math.random() - 0.5) * 150)
+      await placeModel(model, pos, 2.0 + Math.random() * 2.0)
+    }
+
+    // Place buildings (larger, in a circle)
+    for (let i = 0; i < autoGenBuildings && buildings.length > 0; i++) {
+      const model = buildings[Math.floor(Math.random() * buildings.length)]
+      const angle = (i / autoGenBuildings) * Math.PI * 2
+      const radius = 40 + Math.random() * 30
+      const pos = new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
+      await placeModel(model, pos, 3.0 + Math.random() * 2.0)
+    }
+
+    // Place vehicles
+    for (let i = 0; i < autoGenVehicles && vehicles.length > 0; i++) {
+      const model = vehicles[Math.floor(Math.random() * vehicles.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 100, 0, (Math.random() - 0.5) * 100)
+      await placeModel(model, pos, 1.5 + Math.random())
+    }
+
+    // Place animals
+    for (let i = 0; i < autoGenAnimals && animals.length > 0; i++) {
+      const model = animals[Math.floor(Math.random() * animals.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 120, 0, (Math.random() - 0.5) * 120)
+      await placeModel(model, pos, 1.0 + Math.random() * 0.5)
+    }
+
+    // Sprinkle 15-20 random other objects
+    const otherCount = 15 + Math.floor(Math.random() * 6)
+    for (let i = 0; i < otherCount && other.length > 0; i++) {
+      const model = other[Math.floor(Math.random() * other.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 130, 0, (Math.random() - 0.5) * 130)
+      await placeModel(model, pos, 0.8 + Math.random() * 1.5)
+    }
+
+    // Update placedObjects all at once
+    placedObjects = newObjects
+
+    // Reset camera to good overview position
+    camera.position.set(50, 50, 50)
+    camera.lookAt(0, 0, 0)
+    controls.target.set(0, 0, 0)
+    controls.update()
+
+    updatePolygonCount()
+    console.log('Auto-generation complete!')
+    alert(`Map generated successfully! Placed ${placedObjects.length} objects.`)
+  }
+
   function updatePolygonCount() {
     let count = 0
     placedObjects.forEach(obj => {
@@ -1162,6 +1357,90 @@
     fpPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, fpPitch))
   }
 
+  function checkAndFixStuckPlayerPOV(delta: number) {
+    // Check if player is trying to move
+    const isTryingToMove = fpKeysPressed.has('w') || fpKeysPressed.has('a') ||
+                          fpKeysPressed.has('s') || fpKeysPressed.has('d')
+
+    if (!isTryingToMove) {
+      stuckCounter = 0
+      return
+    }
+
+    stuckCheckTimer += delta * 1000
+
+    if (stuckCheckTimer >= STUCK_CHECK_INTERVAL) {
+      const distance = fpPosition.distanceTo(lastPOVPosition)
+
+      if (distance < STUCK_THRESHOLD && isTryingToMove) {
+        stuckCounter++
+        console.log(`Player may be stuck. Counter: ${stuckCounter}, Distance moved: ${distance.toFixed(3)}`)
+
+        if (stuckCounter >= STUCK_COUNT_LIMIT) {
+          console.log('Player is stuck! Attempting to unstuck...')
+
+          // Try shifting the player in different directions
+          const shiftDistance = 2
+          const testDirections = [
+            new THREE.Vector3(shiftDistance, 0, 0),
+            new THREE.Vector3(-shiftDistance, 0, 0),
+            new THREE.Vector3(0, 0, shiftDistance),
+            new THREE.Vector3(0, 0, -shiftDistance),
+            new THREE.Vector3(shiftDistance, 0, shiftDistance),
+            new THREE.Vector3(-shiftDistance, 0, -shiftDistance),
+          ]
+
+          let foundValidPosition = false
+          for (const direction of testDirections) {
+            const testPos = fpPosition.clone().add(direction)
+            testPos.y = fpPosition.y // Keep same height
+
+            if (validateSpawnPosition(testPos)) {
+              fpPosition.copy(testPos)
+              camera.position.copy(fpPosition)
+              foundValidPosition = true
+              console.log('Successfully unstuck player to:', testPos)
+              break
+            }
+          }
+
+          if (!foundValidPosition) {
+            // Last resort: teleport to origin or a random safe position
+            const safePos = new THREE.Vector3(0, GROUND_LEVEL, 0)
+            if (validateSpawnPosition(safePos)) {
+              fpPosition.copy(safePos)
+              camera.position.copy(fpPosition)
+              console.log('Teleported player to origin')
+            } else {
+              // Try random positions
+              for (let i = 0; i < 10; i++) {
+                const randomPos = new THREE.Vector3(
+                  (Math.random() - 0.5) * 40,
+                  GROUND_LEVEL,
+                  (Math.random() - 0.5) * 40
+                )
+                if (validateSpawnPosition(randomPos)) {
+                  fpPosition.copy(randomPos)
+                  camera.position.copy(fpPosition)
+                  console.log('Teleported player to random safe position:', randomPos)
+                  break
+                }
+              }
+            }
+          }
+
+          stuckCounter = 0
+        }
+      } else {
+        // Player is moving fine, reset counter
+        stuckCounter = 0
+      }
+
+      lastPOVPosition.copy(fpPosition)
+      stuckCheckTimer = 0
+    }
+  }
+
   function updateFirstPersonMode(delta: number) {
     if (!isFirstPersonMode || isPOVPaused) return
 
@@ -1218,6 +1497,9 @@
       fpPosition.y = GROUND_LEVEL
       fpVelocity.y = 0
     }
+
+    // Check for stuck player and fix if needed
+    checkAndFixStuckPlayerPOV(delta)
 
     // Update camera position
     camera.position.copy(fpPosition)
@@ -1335,6 +1617,25 @@
 
   // Generate 3D thumbnails for all models
   async function generateThumbnails() {
+    // Check if we have cached thumbnails
+    try {
+      const cachedVersion = localStorage.getItem(THUMBNAIL_VERSION_KEY)
+      const cachedData = localStorage.getItem(THUMBNAIL_CACHE_KEY)
+
+      if (cachedVersion === CURRENT_THUMBNAIL_VERSION && cachedData) {
+        const cached = JSON.parse(cachedData)
+        thumbnails = new Map(Object.entries(cached))
+        thumbnailsLoading = false
+        console.log('Loaded thumbnails from cache')
+        return
+      } else {
+        console.log('Cache invalid or not found, generating thumbnails...')
+      }
+    } catch (error) {
+      console.error('Failed to load cached thumbnails:', error)
+    }
+
+    // Generate thumbnails
     const thumbScene = new THREE.Scene()
     thumbScene.background = new THREE.Color(0x2a2a3e)
 
@@ -1400,6 +1701,16 @@
 
       // Update state after each batch
       thumbnails = new Map(newThumbnails)
+    }
+
+    // Cache the thumbnails
+    try {
+      const cacheData = Object.fromEntries(newThumbnails)
+      localStorage.setItem(THUMBNAIL_CACHE_KEY, JSON.stringify(cacheData))
+      localStorage.setItem(THUMBNAIL_VERSION_KEY, CURRENT_THUMBNAIL_VERSION)
+      console.log('Cached thumbnails to localStorage')
+    } catch (error) {
+      console.error('Failed to cache thumbnails:', error)
     }
 
     thumbnailsLoading = false
@@ -1690,18 +2001,17 @@
   </div>
 
   <!-- Sidebar with Tabs -->
-  <div class="w-full md:w-96 h-64 md:h-screen bg-base-200 overflow-hidden flex flex-col order-last md:order-first relative z-50" style="pointer-events: auto;">
+  <div class="w-full md:w-96 h-64 md:h-screen bg-base-200 overflow-hidden flex flex-col order-last md:order-first relative z-50">
     <!-- Tab Headers -->
-    <div class="tabs tabs-boxed m-2 relative z-50" style="pointer-events: auto;">
+    <div class="tabs tabs-boxed m-2 relative">
       <button
         type="button"
         class="tab {activeTab === 'models' ? 'tab-active' : ''}"
-        style="pointer-events: auto; cursor: pointer;"
         onclick={(e) => {
           e.preventDefault()
-          e.stopPropagation()
-          console.log('Models tab clicked')
-          activeTab = 'models'
+          requestAnimationFrame(() => {
+            activeTab = 'models'
+          })
         }}
       >
         🎨 Models
@@ -1709,12 +2019,11 @@
       <button
         type="button"
         class="tab {activeTab === 'maps' ? 'tab-active' : ''}"
-        style="pointer-events: auto; cursor: pointer;"
         onclick={(e) => {
           e.preventDefault()
-          e.stopPropagation()
-          console.log('Maps tab clicked')
-          activeTab = 'maps'
+          requestAnimationFrame(() => {
+            activeTab = 'maps'
+          })
         }}
       >
         🗺️ Maps
@@ -1722,12 +2031,11 @@
       <button
         type="button"
         class="tab {activeTab === 'options' ? 'tab-active' : ''}"
-        style="pointer-events: auto; cursor: pointer;"
         onclick={(e) => {
           e.preventDefault()
-          e.stopPropagation()
-          console.log('Options tab clicked')
-          activeTab = 'options'
+          requestAnimationFrame(() => {
+            activeTab = 'options'
+          })
         }}
       >
         ⚙️ Options
@@ -1735,7 +2043,7 @@
     </div>
 
     <!-- Tab Content -->
-    <div class="flex-1 overflow-y-auto p-4 pt-0">
+    <div class="flex-1 overflow-y-auto p-4 pt-0" style="pointer-events: auto;">
       {#if activeTab === 'models'}
         <!-- Models Tab -->
         <h2 class="text-2xl font-bold mb-4">Object Palette</h2>
@@ -1871,6 +2179,38 @@
           </button>
         </div>
 
+        <!-- Auto Generate -->
+        <div class="mb-4">
+          <h4 class="font-semibold mb-2">Auto Generate Settings</h4>
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label class="label label-text text-xs">Trees</label>
+              <input type="number" bind:value={autoGenTrees} min="0" max="50" class="input input-xs input-bordered w-full" />
+            </div>
+            <div>
+              <label class="label label-text text-xs">Buildings</label>
+              <input type="number" bind:value={autoGenBuildings} min="0" max="20" class="input input-xs input-bordered w-full" />
+            </div>
+            <div>
+              <label class="label label-text text-xs">Vehicles</label>
+              <input type="number" bind:value={autoGenVehicles} min="0" max="20" class="input input-xs input-bordered w-full" />
+            </div>
+            <div>
+              <label class="label label-text text-xs">Animals</label>
+              <input type="number" bind:value={autoGenAnimals} min="0" max="20" class="input input-xs input-bordered w-full" />
+            </div>
+          </div>
+          <button
+            class="btn btn-sm btn-accent w-full"
+            onclick={autoGenerateMap}
+          >
+            🎲 Auto Generate Map
+          </button>
+          <p class="text-xs text-gray-500 mt-1 text-center">
+            Automatically place objects for fun gameplay
+          </p>
+        </div>
+
         <!-- Saved Maps List -->
         <h3 class="text-lg font-bold mb-2">Saved Maps ({savedMaps.length})</h3>
 
@@ -1880,7 +2220,7 @@
           </div>
         {:else}
           <div class="space-y-2">
-            {#each savedMaps.sort((a, b) => b.modified - a.modified) as map}
+            {#each [...savedMaps].sort((a, b) => b.modified - a.modified) as map}
               <div class="card bg-base-300 shadow-sm">
                 <div class="card-body p-3">
                   {#if map.thumbnail}

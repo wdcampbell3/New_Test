@@ -1214,7 +1214,7 @@
       const mesh = createPowerUpMesh(type)
 
       mesh.position.x = (Math.random() - 0.5) * 60
-      mesh.position.y = Math.random() * 3 + 2
+      mesh.position.y = 4.5 // Chest level for easy collection (player eye level is 6.0)
       mesh.position.z = (Math.random() - 0.5) * 60
 
       // Make sure power-ups don't spawn too close to player (minimum 10 units away)
@@ -1502,7 +1502,7 @@
     const mesh = createPowerUpMesh(type)
 
     mesh.position.x = (Math.random() - 0.5) * 60
-    mesh.position.y = Math.random() * 3 + 2
+    mesh.position.y = 4.5 // Chest level for easy collection (player eye level is 6.0)
     mesh.position.z = (Math.random() - 0.5) * 60
 
     scene.add(mesh)
@@ -1925,6 +1925,16 @@
     projectiles = projectiles.filter((projectile) => {
       // Heat-seeking missile behavior
       if (projectile.type === 'missile' && projectile.target) {
+        // Check if target still exists in enemies array
+        const targetExists = enemies.some(e => e.mesh === projectile.target)
+
+        if (!targetExists) {
+          // Target was destroyed, remove missile with explosion
+          createExplosion(projectile.mesh.position.clone())
+          scene.remove(projectile.mesh)
+          return false
+        }
+
         // Steer towards target
         const directionToTarget = new THREE.Vector3()
         directionToTarget.subVectors(projectile.target.position, projectile.mesh.position)
@@ -2407,9 +2417,15 @@
       // Bob up and down
       powerUp.mesh.position.y += Math.sin(Date.now() * 0.003 + i) * 0.01
 
-      // Check if player is close enough to collect (sphere radius is 0.8, so check 1.6 distance)
-      const distance = powerUp.mesh.position.distanceTo(camera.position)
-      if (distance < 1.6) {
+      // Check horizontal distance (XZ plane) only, ignore Y difference
+      const dx = powerUp.mesh.position.x - camera.position.x
+      const dz = powerUp.mesh.position.z - camera.position.z
+      const horizontalDistance = Math.sqrt(dx * dx + dz * dz)
+
+      // Also check if power-up is within reasonable vertical range (player height +/- 3 units)
+      const dy = Math.abs(powerUp.mesh.position.y - camera.position.y)
+
+      if (horizontalDistance < 2.5 && dy < 3) {
         // Collect power-up!
         collectPowerUp(powerUp)
         scene.remove(powerUp.mesh)
@@ -2888,6 +2904,7 @@
       </div>
     {/if}
 
+    {#if hasStartedGame}
     <div class="stats stats-horizontal md:stats-vertical w-full mb-4 md:mb-6">
       <div class="stat bg-base-100">
         <div class="stat-title">Score</div>
@@ -2902,6 +2919,7 @@
         <div class="stat-value text-secondary text-2xl md:text-4xl">{level}</div>
       </div>
     </div>
+    {/if}
 
     <div class="space-y-4 md:space-y-6">
       <div>
