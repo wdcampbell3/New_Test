@@ -5,9 +5,6 @@ import { vitePreprocess } from "@sveltejs/vite-plugin-svelte"
 const config = {
   kit: {
     adapter: adapter(),
-    // allow up to 150kb of style to be inlined with the HTML
-    // Faster FCP (First Contentful Paint) by reducing the number of requests
-    inlineStyleThreshold: 150000,
   },
   preprocess: vitePreprocess(),
 }

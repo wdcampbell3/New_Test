@@ -3185,7 +3185,7 @@
 
           <!-- Jetpack HUD (Below main HUD on left side) -->
           {#if activePowerUps.has('flying') && currentTime < flyingModeEndTime}
-            <div class="absolute left-4 z-10 bg-black/90 p-4 rounded-lg border-2 border-cyan-500 w-64" style="top: 280px;">
+            <div class="absolute left-4 top-[280px] z-10 bg-black/90 p-4 rounded-lg border-2 border-cyan-500 w-64">
               <div class="text-xl font-bold text-cyan-400 animate-pulse mb-2 text-center">
                 🚀 JETPACK ACTIVE
               </div>
