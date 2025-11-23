@@ -59,6 +59,13 @@
       image:
         "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=400&h=300&fit=crop",
     },
+    {
+      name: "🚀 Starship Flyer",
+      path: "/starship-flyer",
+      description: "Arcade space dogfighting with waves of alien enemies",
+      image:
+        "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=400&h=300&fit=crop",
+    },
   ]
 </script>
 

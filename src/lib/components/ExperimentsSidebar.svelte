@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores"
+  import { hideSidebar } from "$lib/stores/gameState"
 
   const experiments2D = [
     { name: "Space Invaders", path: "/space-invaders", icon: "👾" },
@@ -13,14 +14,15 @@
   const experiments3D = [
     { name: "World Builder", path: "/world-builder", icon: "🏗️" },
     { name: "Blocky Shooter", path: "/fps-game", icon: "🎯" },
+    { name: "Starship Flyer", path: "/starship-flyer", icon: "🚀" },
   ]
 </script>
 
-<div class="drawer lg:drawer-open">
+<div class="drawer {$hideSidebar ? '' : 'lg:drawer-open'}">
   <input id="experiments-drawer" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col">
     <!-- Page content here -->
-    <div class="navbar bg-base-200 lg:hidden">
+    <div class="navbar bg-base-200 {$hideSidebar ? 'hidden' : 'lg:hidden'}">
       <div class="flex-none">
         <label for="experiments-drawer" class="btn btn-square btn-ghost">
           <svg
@@ -42,7 +44,7 @@
         <span class="text-xl font-bold">Experiments</span>
       </div>
     </div>
-    <div class="p-4">
+    <div class="{$hideSidebar ? '' : 'p-4'}">
       <slot />
     </div>
   </div>
