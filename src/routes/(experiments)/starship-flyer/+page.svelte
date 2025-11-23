@@ -65,6 +65,7 @@
 
   // Game Configuration
   type AutoMoveSpeed = 'off' | 'slow' | 'medium' | 'hyper'
+  type MouseInputType = 'auto' | 'trackpad' | 'external'
   interface GameConfig {
     difficulty: 'easy' | 'normal' | 'hard'
     startingHealth: number
@@ -75,6 +76,7 @@
     enemyFireRate: number
     mouseSensitivity: number
     autoMoveSpeed: AutoMoveSpeed
+    mouseInput: MouseInputType
   }
 
   const autoMoveSpeeds: Record<AutoMoveSpeed, number> = {
@@ -82,6 +84,22 @@
     slow: 8,
     medium: 15,
     hyper: 30
+  }
+
+  // Trackpad detection state
+  let detectedInputType: 'unknown' | 'trackpad' | 'external' = 'unknown'
+  let movementSamples: { delta: number; time: number }[] = []
+  let lastMovementTime = 0
+
+  // Continuous motion for trackpad - view keeps moving in last direction
+  let continuousMotion = { x: 0, y: 0 }
+  let motionDecayRate = 0.95  // How quickly motion decays when not touching trackpad
+
+  function getEffectiveInputType(): 'trackpad' | 'external' {
+    if (gameConfig.mouseInput === 'auto') {
+      return detectedInputType === 'unknown' ? 'external' : detectedInputType
+    }
+    return gameConfig.mouseInput
   }
 
   let gameConfig: GameConfig = {
@@ -93,7 +111,8 @@
     enemySpeed: 8.0,
     enemyFireRate: 2000,
     mouseSensitivity: 1.0,  // Default to 1.0 (comfortable), range 0.5-2.0
-    autoMoveSpeed: 'medium'  // Default to medium auto-move
+    autoMoveSpeed: 'medium',  // Default to medium auto-move
+    mouseInput: 'auto'  // Auto-detect trackpad vs external mouse
   }
 
   const difficultyPresets: Record<GameConfig['difficulty'], Partial<GameConfig>> = {
@@ -735,8 +754,40 @@
 
   function handleMouseMove(e: MouseEvent) {
     if (!isPlaying || !isPointerLocked) return
+
+    const now = Date.now()
+    const delta = Math.sqrt(e.movementX ** 2 + e.movementY ** 2)
+
+    // Track movement for input type detection (auto mode)
+    if (gameConfig.mouseInput === 'auto' && delta > 0) {
+      movementSamples.push({ delta, time: now })
+      // Keep only last 30 samples from last 500ms
+      movementSamples = movementSamples.filter(s => now - s.time < 500).slice(-30)
+
+      if (movementSamples.length >= 10) {
+        const avgDelta = movementSamples.reduce((a, b) => a + b.delta, 0) / movementSamples.length
+        const hasSmallMovements = avgDelta < 8  // Trackpads have smaller, more frequent movements
+        const hasFrequentUpdates = movementSamples.length > 15  // More events in 500ms
+
+        if (hasSmallMovements && hasFrequentUpdates) {
+          detectedInputType = 'trackpad'
+        } else if (avgDelta > 15) {
+          detectedInputType = 'external'
+        }
+      }
+    }
+
+    lastMovementTime = now
+
+    // For trackpad mode: set continuous motion direction
+    if (getEffectiveInputType() === 'trackpad') {
+      // Trackpad: accumulate into continuous motion (view keeps drifting)
+      const trackpadSensitivity = 0.15  // Lower sensitivity for continuous motion
+      continuousMotion.x = e.movementX * trackpadSensitivity
+      continuousMotion.y = e.movementY * trackpadSensitivity
+    }
+
     // Store raw mouse delta - sensitivity applied in updatePlayer only
-    // Using direct delta (not accumulated) for more responsive, predictable controls
     mouseMovement.x = e.movementX
     mouseMovement.y = e.movementY
   }
@@ -921,10 +972,30 @@
     // - Base multiplier is very small (0.001) for fine control
     const baseSensitivity = 0.001
     const sensitivity = baseSensitivity * gameConfig.mouseSensitivity
+    const isTrackpadMode = getEffectiveInputType() === 'trackpad'
+
+    // For trackpad: decay continuous motion when no input received
+    const now = Date.now()
+    const timeSinceLastMove = now - lastMovementTime
+    if (isTrackpadMode && timeSinceLastMove > 50) {
+      // No recent input - decay the continuous motion
+      continuousMotion.x *= motionDecayRate
+      continuousMotion.y *= motionDecayRate
+      // Stop very small movements
+      if (Math.abs(continuousMotion.x) < 0.001) continuousMotion.x = 0
+      if (Math.abs(continuousMotion.y) < 0.001) continuousMotion.y = 0
+    }
 
     // Update yaw and pitch from mouse input (tracking angles separately)
-    shipYaw -= mouseMovement.x * sensitivity
-    shipPitch -= mouseMovement.y * sensitivity
+    if (isTrackpadMode) {
+      // Trackpad mode: use continuous motion (view keeps drifting in last direction)
+      shipYaw -= continuousMotion.x * sensitivity * 20  // Amplify for continuous effect
+      shipPitch -= continuousMotion.y * sensitivity * 20
+    } else {
+      // External mouse: direct 1:1 control
+      shipYaw -= mouseMovement.x * sensitivity
+      shipPitch -= mouseMovement.y * sensitivity
+    }
     // Clamp pitch to prevent flipping
     shipPitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, shipPitch))
 
@@ -1330,6 +1401,7 @@
     isBossLevel = false; bossEnemy = null; bossHealth = 0; bossMaxHealth = 0
     weaponInventory = [{ type: 'laser', ammo: -1, name: 'Laser Cannon' }]; currentWeaponIndex = 0
     boostCharges = 0; boostActive = false; boostEndTime = 0
+    continuousMotion = { x: 0, y: 0 }; movementSamples = []; lastMovementTime = 0
     velocity.set(0, 0, 0)
     bankAngle = 0
     barrelRollAngle = 0
@@ -1512,6 +1584,37 @@
                 on:click={() => gameConfig.autoMoveSpeed = 'hyper'}
               >Hyper</button>
             </div>
+          </div>
+
+          <!-- Mouse Input Type -->
+          <div class="mb-4">
+            <label class="label text-sm font-semibold">Mouse Input</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                class="btn btn-sm {gameConfig.mouseInput === 'auto' ? 'btn-primary' : 'btn-outline'}"
+                on:click={() => gameConfig.mouseInput = 'auto'}
+              >
+                Auto
+                {#if gameConfig.mouseInput === 'auto' && detectedInputType !== 'unknown'}
+                  <span class="text-xs opacity-70">({detectedInputType})</span>
+                {/if}
+              </button>
+              <button
+                class="btn btn-sm {gameConfig.mouseInput === 'trackpad' ? 'btn-info' : 'btn-outline'}"
+                on:click={() => gameConfig.mouseInput = 'trackpad'}
+              >
+                Trackpad
+                <div class="text-xs opacity-70">Continuous</div>
+              </button>
+              <button
+                class="btn btn-sm {gameConfig.mouseInput === 'external' ? 'btn-success' : 'btn-outline'}"
+                on:click={() => gameConfig.mouseInput = 'external'}
+              >
+                External
+                <div class="text-xs opacity-70">Direct</div>
+              </button>
+            </div>
+            <div class="text-xs text-gray-500 mt-1">Trackpad mode: view continues moving in the direction you swipe</div>
           </div>
 
           <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-left">
