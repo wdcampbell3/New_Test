@@ -63,6 +63,14 @@
   ]
   let selectedSpaceship: SpaceshipOption = spaceshipOptions[0]
 
+  // Model Catalog for auto-generation (same as FPS game)
+  interface ModelCatalogItem {
+    name: string
+    path: string
+    category: string
+  }
+  let modelCatalog: ModelCatalogItem[] = []
+
   // Game Configuration
   type AutoMoveSpeed = 'off' | 'slow' | 'medium' | 'hyper'
   type MouseInputType = 'auto' | 'trackpad' | 'external'
@@ -234,7 +242,7 @@
   let boostCharges = 0
   let boostActive = false
   let boostEndTime = 0
-  const boostDuration = 3000  // 3 seconds of boost per charge
+  const boostDuration = 2000  // 2 seconds of boost per charge
 
   // Power-up collection alert
   let powerUpAlert: { message: string; color: string; timestamp: number } | null = null
@@ -265,6 +273,16 @@
         console.error('Failed to load maps:', e)
         availableMaps = []
       }
+    }
+  }
+
+  // Load model catalog for level auto-generation (same as FPS game)
+  async function loadModelCatalog() {
+    try {
+      const response = await fetch('/modelCatalog.json')
+      modelCatalog = await response.json()
+    } catch (e) {
+      console.error('Failed to load model catalog:', e)
     }
   }
 
@@ -346,6 +364,7 @@
   onMount(() => {
     loadAvailableMaps()
     initThree()
+    loadModelCatalog()
 
     // Render ship previews after a short delay to ensure DOM is ready
     setTimeout(renderShipPreviews, 100)
@@ -519,6 +538,109 @@
     }
   }
 
+  // Generate scenery for the level (same as FPS game - simplified version of World Builder auto-generate)
+  async function generateLevelScenery() {
+    if (modelCatalog.length === 0) return
+
+    // Clear existing solid objects
+    solidObjects.forEach(obj => scene.remove(obj))
+    solidObjects = []
+
+    // Categorize models (same as FPS game / World Builder)
+    const trees = modelCatalog.filter(m =>
+      m.category === 'Nature' && (
+        m.name.toLowerCase().includes('tree') ||
+        m.name.toLowerCase().includes('pine') ||
+        m.name.toLowerCase().includes('oak')
+      )
+    )
+    const buildings = modelCatalog.filter(m =>
+      m.category === 'Buildings' ||
+      m.name.toLowerCase().includes('building') ||
+      m.name.toLowerCase().includes('house') ||
+      m.name.toLowerCase().includes('tower')
+    )
+    const vehicles = modelCatalog.filter(m =>
+      m.category === 'Vehicles'
+    )
+    const other = modelCatalog.filter(m =>
+      m.category === 'Decor' || m.category === 'Urban' || m.category === 'Props'
+    )
+
+    const loader = new GLTFLoader()
+
+    // Helper to place model (same as FPS game)
+    const placeModel = async (model: ModelCatalogItem, position: THREE.Vector3, baseScale: number) => {
+      try {
+        const gltf = await loader.loadAsync(model.path)
+        const mesh = gltf.scene
+        mesh.position.copy(position)
+        mesh.rotation.y = Math.random() * Math.PI * 2
+
+        // Calculate initial size
+        const bbox = new THREE.Box3().setFromObject(mesh)
+        const size = bbox.getSize(new THREE.Vector3())
+        const maxDim = Math.max(size.x, size.y, size.z)
+
+        // Scale to reasonable size based on object type
+        if (maxDim > 0) {
+          const scaleFactor = baseScale / maxDim
+          mesh.scale.setScalar(scaleFactor)
+        } else {
+          mesh.scale.setScalar(1)
+        }
+
+        mesh.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+          }
+        })
+
+        scene.add(mesh)
+        solidObjects.push(mesh)
+      } catch (error) {
+        console.error('Failed to load scenery model:', model.path, error)
+      }
+    }
+
+    // Place trees (10-15) - target size 3-5 units tall
+    const treeCount = 10 + Math.floor(Math.random() * 6)
+    for (let i = 0; i < treeCount && trees.length > 0; i++) {
+      const model = trees[Math.floor(Math.random() * trees.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80)
+      await placeModel(model, pos, 3.5 + Math.random() * 1.5)
+    }
+
+    // Place buildings (3-5 in a loose circle) - target size 8-12 units
+    const buildingCount = 3 + Math.floor(Math.random() * 3)
+    for (let i = 0; i < buildingCount && buildings.length > 0; i++) {
+      const model = buildings[Math.floor(Math.random() * buildings.length)]
+      const angle = (i / buildingCount) * Math.PI * 2
+      const radius = 30 + Math.random() * 20
+      const pos = new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
+      await placeModel(model, pos, 10 + Math.random() * 2)
+    }
+
+    // Place vehicles (2-4) - target size 3-4 units
+    const vehicleCount = 2 + Math.floor(Math.random() * 3)
+    for (let i = 0; i < vehicleCount && vehicles.length > 0; i++) {
+      const model = vehicles[Math.floor(Math.random() * vehicles.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60)
+      await placeModel(model, pos, 3.5 + Math.random() * 0.5)
+    }
+
+    // Sprinkle other objects (5-10) - target size 1-3 units
+    const otherCount = 5 + Math.floor(Math.random() * 6)
+    for (let i = 0; i < otherCount && other.length > 0; i++) {
+      const model = other[Math.floor(Math.random() * other.length)]
+      const pos = new THREE.Vector3((Math.random() - 0.5) * 70, 0, (Math.random() - 0.5) * 70)
+      await placeModel(model, pos, 2.0 + Math.random() * 1.0)
+    }
+
+    console.log(`Level ${level} auto-generated: ${solidObjects.length} objects`)
+  }
+
   function createEnemyModel(type: EnemyType): THREE.Group {
     const g = new THREE.Group()
 
@@ -652,16 +774,16 @@
   }
 
   // Check if we should drop a power-up based on frequency setting
-  function trySpawnPowerUpOnKill() {
+  function trySpawnPowerUpOnKill(position: THREE.Vector3) {
     killsSinceLastDrop++
     const dropRate = powerUpDropRates[gameConfig.powerUpFrequency]
     if (killsSinceLastDrop >= dropRate) {
       killsSinceLastDrop = 0
-      spawnPowerUp()
+      spawnPowerUpAt(position)
     }
   }
 
-  function spawnPowerUp() {
+  function spawnPowerUpAt(position: THREE.Vector3) {
     const types: PowerUpType[] = ['health', 'ammo', 'boost', 'weapon-missile', 'weapon-plasma', 'weapon-chain', 'weapon-drone', 'weapon-scatter']
     const type = types[Math.floor(Math.random() * types.length)]
     const g = new THREE.Group()
@@ -740,7 +862,7 @@
     ring.rotation.x = Math.PI / 2
     g.add(ring)
 
-    g.position.set((Math.random() - 0.5) * 100, 5 + Math.random() * 20, (Math.random() - 0.5) * 100)
+    g.position.copy(position)
     scene.add(g)
     powerUps.push({ mesh: g, type })
   }
@@ -854,12 +976,35 @@
     let vel: THREE.Vector3, dmg: number, lt: number
 
     if (weapon.type === 'laser') {
-      // Laser - Cyan Sphere with Glow
-      const boltMaterial = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 1 })
-      mesh = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), boltMaterial)
-      const glowMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 })
-      mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), glowMaterial))
-      vel = dir.clone().multiplyScalar(80); dmg = gameConfig.playerDamage; lt = 2
+      // Laser - Sleek elongated beam with bright core and energy trail
+      const beamGroup = new THREE.Group()
+
+      // Core beam - bright white center
+      const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.2, 6), coreMaterial)
+      core.rotation.x = Math.PI / 2
+
+      // Inner glow - cyan
+      const innerGlowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 })
+      const innerGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 8), innerGlowMat)
+      innerGlow.rotation.x = Math.PI / 2
+
+      // Outer glow - larger, more transparent
+      const outerGlowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 })
+      const outerGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.8, 8), outerGlowMat)
+      outerGlow.rotation.x = Math.PI / 2
+
+      // Tip point
+      const tipMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 6), tipMat)
+      tip.rotation.x = -Math.PI / 2
+      tip.position.z = -0.7
+
+      beamGroup.add(core, innerGlow, outerGlow, tip)
+      beamGroup.lookAt(beamGroup.position.clone().add(dir))
+      mesh = beamGroup as unknown as THREE.Mesh
+
+      vel = dir.clone().multiplyScalar(150); dmg = gameConfig.playerDamage; lt = 1.5  // Much faster!
       mesh.position.copy(playerShip.position).add(dir.clone().multiplyScalar(1.5))
       scene.add(mesh)
       projectiles.push({ mesh, velocity: vel, damage: dmg, type: weapon.type, lifetime: lt })
@@ -885,7 +1030,31 @@
       projectiles.push({ mesh, velocity: vel, damage: dmg, type: weapon.type, lifetime: lt, target: closestEnemy })
 
     } else if (weapon.type === 'plasma') {
-      // Plasma Cannon - Slow, powerful magenta orb with AoE on impact
+      // Plasma Cannon - Forward-only with short-range homing toward enemies near crosshair
+      // Ensure we're shooting forward - check if aim direction is in front of ship
+      const shipFwd = new THREE.Vector3(0, 0, -1).applyQuaternion(playerShip.quaternion)
+      const aimDot = dir.dot(shipFwd)
+      if (aimDot < 0.3) {
+        // Aiming too far backward - force forward direction
+        dir.copy(shipFwd)
+      }
+
+      // Find closest enemy near the crosshair (short range, must be in front)
+      let plasmaTarget: Enemy | null = null
+      let closestAngle = Math.PI / 4  // Max 45 degrees from crosshair
+      for (const e of enemies) {
+        const toEnemy = e.mesh.position.clone().sub(playerShip.position)
+        const dist = toEnemy.length()
+        if (dist < 50) {  // Short range
+          toEnemy.normalize()
+          const angle = Math.acos(Math.max(-1, Math.min(1, toEnemy.dot(dir))))
+          if (angle < closestAngle) {
+            closestAngle = angle
+            plasmaTarget = e
+          }
+        }
+      }
+
       const plasmaMat = new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 1.5 })
       mesh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), plasmaMat)
       // Add energy rings
@@ -894,26 +1063,99 @@
       const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 16), ringMat)
       ring1.rotation.x = Math.PI / 2; ring2.rotation.y = Math.PI / 2
       mesh.add(ring1, ring2)
-      vel = dir.clone().multiplyScalar(55); dmg = gameConfig.playerDamage * 3; lt = 4  // Faster plasma, longer lifetime
+      vel = dir.clone().multiplyScalar(60); dmg = gameConfig.playerDamage * 3; lt = 3
       mesh.position.copy(playerShip.position).add(dir.clone().multiplyScalar(1.5))
       scene.add(mesh)
-      projectiles.push({ mesh, velocity: vel, damage: dmg, type: weapon.type, lifetime: lt })
+      projectiles.push({ mesh, velocity: vel, damage: dmg, type: weapon.type, lifetime: lt, target: plasmaTarget })
 
     } else if (weapon.type === 'chain') {
-      // Chain Lightning - Electric blue bolt that arcs to nearby enemies
-      const chainMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, emissive: 0x00aaff, emissiveIntensity: 2.0 })
-      mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.2), chainMat)
-      // Add spark effect
-      const sparkMat = new THREE.MeshBasicMaterial({ color: 0x88ddff, transparent: true, opacity: 0.7 })
-      for (let i = 0; i < 4; i++) {
-        const spark = new THREE.Mesh(new THREE.OctahedronGeometry(0.08), sparkMat)
-        spark.position.set((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4)
-        mesh.add(spark)
+      // Chain Lightning - Instant lightning bolt that hits closest enemy to crosshair and chains
+      // Ensure forward-only firing
+      const shipFwd = new THREE.Vector3(0, 0, -1).applyQuaternion(playerShip.quaternion)
+      const aimDot = dir.dot(shipFwd)
+      if (aimDot < 0.3) {
+        dir.copy(shipFwd)  // Force forward if aiming backward
       }
-      vel = dir.clone().multiplyScalar(90); dmg = gameConfig.playerDamage * 1.0; lt = 2.5  // Faster chain, better damage
-      mesh.position.copy(playerShip.position).add(dir.clone().multiplyScalar(1.5))
-      scene.add(mesh)
-      projectiles.push({ mesh, velocity: vel, damage: dmg, type: weapon.type, lifetime: lt, chainTargets: [] })
+
+      // Find the closest enemy near the crosshair (medium range)
+      let primaryTarget: Enemy | null = null
+      let closestAngle = Math.PI / 3  // Max 60 degrees from crosshair
+      for (const e of enemies) {
+        const toEnemy = e.mesh.position.clone().sub(playerShip.position)
+        const dist = toEnemy.length()
+        if (dist < 70) {  // Medium range
+          toEnemy.normalize()
+          const angle = Math.acos(Math.max(-1, Math.min(1, toEnemy.dot(dir))))
+          if (angle < closestAngle) {
+            closestAngle = angle
+            primaryTarget = e
+          }
+        }
+      }
+
+      if (primaryTarget) {
+        // Found a target - create instant lightning chain!
+        const chainDamage = gameConfig.playerDamage * 1.5
+        const hitEnemies: Enemy[] = [primaryTarget]
+
+        // Create lightning from ship to first target
+        createLightningArc(playerShip.position.clone().add(dir.clone().multiplyScalar(1.5)), primaryTarget.mesh.position)
+
+        // Damage first target
+        primaryTarget.health -= chainDamage
+        if (primaryTarget.type === 'boss') bossHealth = primaryTarget.health
+
+        // Chain to up to 2 more enemies (3 total)
+        let lastTarget = primaryTarget
+        for (let chainCount = 0; chainCount < 2; chainCount++) {
+          let nextTarget: Enemy | null = null
+          let shortestDist = 20  // Short chain range
+
+          for (const e of enemies) {
+            if (!hitEnemies.includes(e)) {
+              const d = lastTarget.mesh.position.distanceTo(e.mesh.position)
+              if (d < shortestDist) {
+                shortestDist = d
+                nextTarget = e
+              }
+            }
+          }
+
+          if (nextTarget) {
+            // Create lightning arc to next target
+            createLightningArc(lastTarget.mesh.position, nextTarget.mesh.position)
+            // Damage chained enemy (reduced damage)
+            const chainedDamage = chainDamage * (0.8 - chainCount * 0.15)
+            nextTarget.health -= chainedDamage
+            if (nextTarget.type === 'boss') bossHealth = nextTarget.health
+            hitEnemies.push(nextTarget)
+            lastTarget = nextTarget
+          } else {
+            break  // No more targets to chain to
+          }
+        }
+
+        // Check for kills on all hit enemies
+        for (const e of hitEnemies) {
+          if (e.health <= 0 && enemies.includes(e)) {
+            createExplosion(e.mesh.position, e.type === 'boss' ? 3 : 1)
+            const deathPos = e.mesh.position.clone()
+            scene.remove(e.mesh)
+            const idx = enemies.indexOf(e)
+            if (idx !== -1) enemies.splice(idx, 1)
+            score += e.type === 'boss' ? 500 : e.type === 'tank' ? 100 : e.type === 'fast' ? 50 : 25
+            kills++
+            if (e.type === 'boss') { bossEnemy = null; bossHealth = 0; isBossLevel = false }
+            trySpawnPowerUpOnKill(deathPos)
+          }
+        }
+      } else {
+        // No target found - fire a visual-only lightning bolt forward
+        const endPoint = playerShip.position.clone().add(dir.clone().multiplyScalar(50))
+        createLightningArc(playerShip.position.clone().add(dir.clone().multiplyScalar(1.5)), endPoint)
+      }
+      // Chain lightning is instant - no projectile needed
+      return
 
     } else if (weapon.type === 'drone') {
       // Drone Swarm - Releases 3 autonomous attack drones
@@ -971,6 +1213,32 @@
     }
   }
 
+  // Boost trail particles - cyan/blue energy trail behind ship
+  function spawnBoostParticles() {
+    if (!playerShip) return
+    // Get backward direction of ship for trail
+    const back = new THREE.Vector3(0, 0, 1).applyQuaternion(playerShip.quaternion)
+    const spawnPos = playerShip.position.clone().add(back.clone().multiplyScalar(1.5))
+
+    for (let i = 0; i < 3; i++) {
+      const hue = 0.5 + Math.random() * 0.1  // Cyan to blue
+      const p = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1 + Math.random() * 0.1, 4, 4),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 1, 0.6), transparent: true })
+      )
+      p.position.copy(spawnPos).add(new THREE.Vector3(
+        (Math.random() - 0.5) * 0.5,
+        (Math.random() - 0.5) * 0.5,
+        (Math.random() - 0.5) * 0.5
+      ))
+      scene.add(p)
+      // Particles trail behind
+      const vel = back.clone().multiplyScalar(20 + Math.random() * 15)
+      vel.add(new THREE.Vector3((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5))
+      particles.push({ mesh: p, velocity: vel, lifetime: 0.5, maxLifetime: 0.5 })
+    }
+  }
+
   // Camera follow state
   let smoothedCameraPos = new THREE.Vector3()
   let cameraInitialized = false
@@ -981,6 +1249,11 @@
     // Check if boost has expired
     if (boostActive && Date.now() > boostEndTime) {
       boostActive = false
+    }
+
+    // Boost animation - spawn trail particles when boosting
+    if (boostActive && Math.random() < 0.5) {
+      spawnBoostParticles()
     }
 
     // Continuous fire when shift OR mouse button is held
@@ -1081,7 +1354,12 @@
 
     // W/S control forward/back thrust (adds to auto-move)
     if (keys['w']) target.add(fwd.clone().multiplyScalar(acceleration))
-    if (keys['s']) target.add(fwd.clone().multiplyScalar(-acceleration * 0.5))
+    // S reverses the ship (full reverse, overrides auto-move)
+    if (keys['s']) {
+      // Cancel auto-move and apply reverse thrust
+      target.set(0, 0, 0)
+      target.add(fwd.clone().multiplyScalar(-acceleration))
+    }
     // Control for up/down
     if (keys['control']) target.add(up.clone().multiplyScalar(-acceleration * 0.5))
 
@@ -1091,7 +1369,7 @@
     target.add(barrelRollVelocity)
 
     velocity.lerp(target, delta * 3)
-    velocity.clampLength(0, maxSpeed * (boostActive ? 2 : 1))
+    velocity.clampLength(0, maxSpeed * (boostActive ? 3 : 1))
     playerShip.position.add(velocity.clone().multiplyScalar(delta))
 
     if (playerShip.position.y < 2) { playerShip.position.y = 2; velocity.y = Math.max(0, velocity.y) }
@@ -1198,18 +1476,21 @@
         }
       }
 
-      // Plasma and Chain Lightning have slight homing to help with accuracy
-      if ((p.type === 'plasma' || p.type === 'chain') && !p.isEnemy) {
-        let closestEnemy: Enemy | null = null, closestDist = Infinity
-        for (const e of enemies) {
-          const d = p.mesh.position.distanceTo(e.mesh.position)
-          const range = p.type === 'plasma' ? 35 : 25  // Plasma has longer homing range
-          if (d < range && d < closestDist) { closestDist = d; closestEnemy = e }
+      // Plasma has short-range homing to hit enemies near crosshair
+      if (p.type === 'plasma' && !p.isEnemy) {
+        // Use the target we set when firing, or find nearest if target died
+        if (!p.target || !enemies.includes(p.target)) {
+          let closestEnemy: Enemy | null = null, closestDist = Infinity
+          for (const e of enemies) {
+            const d = p.mesh.position.distanceTo(e.mesh.position)
+            if (d < 25 && d < closestDist) { closestDist = d; closestEnemy = e }  // Short range
+          }
+          p.target = closestEnemy
         }
-        if (closestEnemy) {
-          const toTarget = new THREE.Vector3().subVectors(closestEnemy.mesh.position, p.mesh.position).normalize()
+        if (p.target) {
+          const toTarget = new THREE.Vector3().subVectors(p.target.mesh.position, p.mesh.position).normalize()
           const currentDir = p.velocity.clone().normalize()
-          const turnRate = (p.type === 'plasma' ? 3.0 : 2.5) * delta  // Gentle homing
+          const turnRate = 5.0 * delta  // Strong homing for accuracy
           const newDir = currentDir.lerp(toTarget, Math.min(turnRate, 1))
           const speed = p.velocity.length()
           p.velocity.copy(newDir.normalize().multiplyScalar(speed))
@@ -1245,47 +1526,16 @@
               })
             }
 
-            // Chain Lightning - arc to nearby enemies
-            if (p.type === 'chain' && p.chainTargets) {
-              p.chainTargets.push(e)
-              // Find next target to chain to (max 4 chains)
-              if (p.chainTargets.length < 5) {
-                let nextTarget: Enemy | null = null, closestDist = Infinity
-                for (const candidate of enemies) {
-                  if (!p.chainTargets.includes(candidate)) {
-                    const d = e.mesh.position.distanceTo(candidate.mesh.position)
-                    if (d < 15 && d < closestDist) { closestDist = d; nextTarget = candidate }
-                  }
-                }
-                if (nextTarget) {
-                  // Create visual lightning arc
-                  createLightningArc(e.mesh.position, nextTarget.mesh.position)
-                  // Damage the chained enemy
-                  nextTarget.health -= p.damage * 0.7
-                  if (nextTarget.type === 'boss') bossHealth = nextTarget.health
-                  p.chainTargets.push(nextTarget)
-                  // Check if chained enemy died
-                  if (nextTarget.health <= 0) {
-                    createExplosion(nextTarget.mesh.position, nextTarget.type === 'boss' ? 3 : 1)
-                    scene.remove(nextTarget.mesh)
-                    const idx = enemies.indexOf(nextTarget)
-                    if (idx !== -1) enemies.splice(idx, 1)
-                    score += nextTarget.type === 'boss' ? 500 : nextTarget.type === 'tank' ? 100 : nextTarget.type === 'fast' ? 50 : 25
-                    kills++
-                    if (nextTarget.type === 'boss') { bossEnemy = null; bossHealth = 0; isBossLevel = false }
-                    trySpawnPowerUpOnKill()
-                  }
-                }
-              }
-            }
+            // Note: Chain lightning is now instant and handled at fire time, not as a projectile
 
             if (e.health <= 0) {
               createExplosion(e.mesh.position, e.type === 'boss' ? 3 : 1)
+              const deathPos = e.mesh.position.clone()
               scene.remove(e.mesh); enemies.splice(i, 1)
               score += e.type === 'boss' ? 500 : e.type === 'tank' ? 100 : e.type === 'fast' ? 50 : 25
               kills++
               if (e.type === 'boss') { bossEnemy = null; bossHealth = 0; isBossLevel = false }
-              trySpawnPowerUpOnKill()
+              trySpawnPowerUpOnKill(deathPos)
             }
             scene.remove(p.mesh); return false
           }
@@ -1339,7 +1589,7 @@
 
     powerUps = powerUps.filter(p => {
       p.mesh.rotation.y += delta * 2; p.mesh.rotation.x += delta
-      if (playerShip!.position.distanceTo(p.mesh.position) < 2) {
+      if (playerShip!.position.distanceTo(p.mesh.position) < 3) {  // 50% larger collision radius
         // Trigger flashing alert
         const alertInfo = powerUpNames[p.type]
         powerUpAlert = { message: alertInfo.name, color: alertInfo.color, timestamp: Date.now() }
@@ -1358,10 +1608,31 @@
     })
   }
 
+  // Weapon inventory limits
+  const weaponMaxAmmo: Record<Weapon['type'], number> = {
+    laser: -1,      // Unlimited
+    missile: 8,
+    chain: 3,
+    plasma: 5,
+    drone: 5,
+    scatter: 8
+  }
+
   function addWeapon(type: Weapon['type'], ammo: number, name: string) {
+    const maxAmmo = weaponMaxAmmo[type]
     const ex = weaponInventory.find(w => w.type === type)
-    if (ex) ex.ammo += ammo
-    else weaponInventory.push({ type, ammo, name })
+    if (ex) {
+      // Add ammo but cap at max
+      if (maxAmmo === -1) {
+        ex.ammo = -1  // Keep unlimited
+      } else {
+        ex.ammo = Math.min(ex.ammo + ammo, maxAmmo)
+      }
+    } else {
+      // New weapon - cap initial ammo at max
+      const initialAmmo = maxAmmo === -1 ? -1 : Math.min(ammo, maxAmmo)
+      weaponInventory.push({ type, ammo: initialAmmo, name })
+    }
     weaponInventory = weaponInventory
   }
 
@@ -1378,8 +1649,33 @@
     gameConfig.enemySpeed *= 1.05
     gameConfig.enemyFireRate = Math.max(gameConfig.enemyFireRate * 0.95, 800)
     health = Math.min(health + 30, 100)
+
+    // Reset weapons each level (player starts fresh with just laser)
+    weaponInventory = [{ type: 'laser', ammo: -1, name: 'Laser Cannon' }]
+    currentWeaponIndex = 0
+
+    // Clear existing solid objects before loading new level
+    solidObjects.forEach(obj => scene.remove(obj))
+    solidObjects = []
+
+    // Try to load next saved map, otherwise auto-generate
+    const nextMapIndex = level - 1  // level 2 uses map index 1, etc.
+    if (availableMaps.length > 0 && nextMapIndex < availableMaps.length) {
+      // Use the next saved map
+      await loadMap(availableMaps[nextMapIndex])
+    } else {
+      // No more saved maps, auto-generate
+      await generateLevelScenery()
+    }
+
+    // Reposition player to safe location
+    const spawnPos = findSafeSpawnPosition()
+    if (playerShip) {
+      playerShip.position.copy(spawnPos)
+      velocity.set(0, 0, 0)
+    }
+
     spawnWave()
-    // Power-ups only drop from enemies now
     isLoadingLevel = false
   }
 
