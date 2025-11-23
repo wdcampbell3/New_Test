@@ -38,10 +38,21 @@
     }
   }
 
+  const staticMapFiles = [
+    'Basic_Town.json',
+    'Burnt_Tree_Map.json',
+    'Farm_City.json',
+    'Spread_Out_Town.json',
+    'Windmills___Such_.json'
+  ]
+
   let availableMaps: MapData[] = []
+  let customMaps: MapData[] = []  // User-created maps from localStorage
+  let builtInMaps: MapData[] = []  // Static maps from /3d-maps/
   let selectedMap: MapData | null = null
   let showMapSelector = true
   let isLoadingMap = false
+  let defaultMapThumbnail: string | null = null
 
   // Model catalog (kept for potential future use)
   interface ModelCatalogItem {
@@ -520,8 +531,11 @@
   let audioContext: AudioContext | null = null
 
   onMount(() => {
-    // Load available maps from World Builder
+    // Load available maps from World Builder and static maps
     loadAvailableMaps()
+    loadStaticMaps()
+    loadDefaultMapThumbnail()
+    loadModelCatalog()
 
     initScene()
     animate()
@@ -536,17 +550,58 @@
     }
   })
 
-  async function loadAvailableMaps() {
+  function loadAvailableMaps() {
+    // Use same localStorage key as World Builder
     const stored = localStorage.getItem('worldBuilder_maps')
     if (stored) {
       try {
-        availableMaps = JSON.parse(stored)
+        customMaps = JSON.parse(stored)
       } catch (e) {
         console.error('Failed to load maps:', e)
-        availableMaps = []
+        customMaps = []
       }
     }
+    updateAvailableMaps()
+  }
 
+  async function loadStaticMaps() {
+    const maps: MapData[] = []
+    for (const file of staticMapFiles) {
+      try {
+        const response = await fetch(`/3d-maps/${file}`)
+        if (!response.ok) continue
+        const data: MapData = await response.json()
+        maps.push({
+          ...data,
+          id: data.id ?? file,
+          name: data.name ?? file.replace('.json', '')
+        })
+      } catch (e) {
+        console.error('Failed to load static map:', file, e)
+      }
+    }
+    builtInMaps = maps
+    updateAvailableMaps()
+  }
+
+  function updateAvailableMaps() {
+    // Merge custom and built-in maps, avoiding duplicates
+    const existingIds = new Set(customMaps.map(m => m.id))
+    availableMaps = [...customMaps, ...builtInMaps.filter(m => !existingIds.has(m.id))]
+  }
+
+  // Load default map thumbnail for menu display
+  async function loadDefaultMapThumbnail() {
+    try {
+      const response = await fetch('/3d-maps/default_map.json')
+      const data: MapData = await response.json()
+      defaultMapThumbnail = data.thumbnail
+    } catch (e) {
+      console.error('Failed to load default map thumbnail:', e)
+    }
+  }
+
+  async function loadModelCatalog() {
     // Load model catalog for random map generation
     try {
       const response = await fetch('/modelCatalog.json')
@@ -3034,54 +3089,111 @@
               </div>
             </div>
 
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Select a Map</h3>
-
-            <!-- Random map generation removed - use World Builder instead -->
-
-            {#if availableMaps.length === 0}
-              <div class="bg-yellow-50 p-8 rounded-lg mb-4 border-2 border-yellow-200">
-                <p class="text-lg mb-4 text-gray-900">No World Builder maps found.</p>
-                <p class="text-sm text-gray-600 mb-4">
-                  Create maps in World Builder first, then play them here!
-                </p>
-                <button class="btn btn-primary btn-lg text-white" on:click={startWithDefaultMap}>
-                  Play Default Map
-                </button>
+            <!-- Select a Map -->
+            <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-900">Select a Map</h3>
+                <a class="text-blue-600 font-semibold underline text-sm" href="/experiments/world-builder">
+                  Build a Map →
+                </a>
               </div>
-            {:else}
-              <div class="flex justify-center mb-6">
-                <div class="inline-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
-                  {#each availableMaps as map}
+
+              <!-- Horizontal scrolling map carousel -->
+              <div class="relative">
+                <!-- Left Arrow -->
+                <button
+                  class="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center shadow-lg -ml-2 transition-all"
+                  on:click={() => {
+                    const container = document.getElementById('fps-map-carousel')
+                    if (container) container.scrollBy({ left: -220, behavior: 'smooth' })
+                  }}
+                >
+                  <span class="text-xl font-bold">‹</span>
+                </button>
+
+                <!-- Map Cards Container -->
+                <div
+                  id="fps-map-carousel"
+                  class="flex gap-4 overflow-x-auto scroll-smooth px-8 py-2"
+                  style="scrollbar-width: none; -ms-overflow-style: none;"
+                >
+                  <!-- Default Map - Always First -->
+                  <button
+                    class="flex-shrink-0 w-52 card bg-green-50 hover:bg-green-100 transition-all duration-200 cursor-pointer border-2 {selectedMap === null ? 'border-green-500 ring-2 ring-green-400' : 'border-green-300 hover:border-green-500'} shadow-lg hover:shadow-xl"
+                    on:click={() => { selectedMap = null }}
+                  >
+                    <div class="card-body p-3">
+                      <div class="w-full h-24 rounded mb-2 overflow-hidden bg-gradient-to-br from-green-700 to-blue-800 flex items-center justify-center border border-green-300">
+                        {#if defaultMapThumbnail}
+                          <img src={defaultMapThumbnail} alt="Default Map" class="w-full h-full object-cover" />
+                        {:else}
+                          <div class="text-3xl opacity-70">🌍</div>
+                        {/if}
+                      </div>
+                      <h4 class="font-bold text-sm text-gray-900 truncate">Default Map</h4>
+                      <div class="text-xs text-gray-500">Procedural</div>
+                    </div>
+                  </button>
+
+                  <!-- Custom Maps -->
+                  {#each customMaps as map}
                     <button
-                      class="card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 border-yellow-300 hover:border-yellow-500 shadow-lg hover:shadow-xl"
-                      on:click={() => selectMapAndStart(map)}
+                      class="flex-shrink-0 w-52 card bg-purple-50 hover:bg-purple-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-purple-500 ring-2 ring-purple-400' : 'border-purple-300 hover:border-purple-500'} shadow-lg hover:shadow-xl"
+                      on:click={() => { selectedMap = map }}
                     >
-                      <div class="card-body p-4">
-                        <div class="w-full h-32 rounded mb-2 overflow-hidden bg-yellow-100 flex items-center justify-center border border-yellow-300">
+                      <div class="card-body p-3">
+                        <div class="absolute top-2 right-2 bg-purple-500 text-white text-xs px-2 py-0.5 rounded">Custom</div>
+                        <div class="w-full h-24 rounded mb-2 overflow-hidden bg-purple-100 flex items-center justify-center border border-purple-300">
                           {#if map.thumbnail}
-                            <img
-                              src={map.thumbnail}
-                              alt={map.name}
-                              class="w-full h-full object-cover"
-                            />
+                            <img src={map.thumbnail} alt={map.name} class="w-full h-full object-cover" />
                           {:else}
-                            <div class="text-4xl opacity-50">🗺️</div>
+                            <div class="text-3xl opacity-50">🗺️</div>
                           {/if}
                         </div>
-                        <h3 class="font-bold text-lg text-gray-900">{map.name}</h3>
-                        <div class="text-xs text-gray-600">
-                          {map.stats.objectCount} objects • {map.environment.timeOfDay} • {map.environment.weather}
+                        <h4 class="font-bold text-sm text-gray-900 truncate">{map.name}</h4>
+                        <div class="text-xs text-gray-500 truncate">{map.stats.objectCount} objects</div>
+                      </div>
+                    </button>
+                  {/each}
+
+                  <!-- Built-in Maps -->
+                  {#each builtInMaps as map}
+                    <button
+                      class="flex-shrink-0 w-52 card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl"
+                      on:click={() => { selectedMap = map }}
+                    >
+                      <div class="card-body p-3">
+                        <div class="absolute top-2 right-2 bg-yellow-500 text-gray-900 text-xs px-2 py-0.5 rounded">Built-in</div>
+                        <div class="w-full h-24 rounded mb-2 overflow-hidden bg-yellow-100 flex items-center justify-center border border-yellow-300">
+                          {#if map.thumbnail}
+                            <img src={map.thumbnail} alt={map.name} class="w-full h-full object-cover" />
+                          {:else}
+                            <div class="text-3xl opacity-50">🗺️</div>
+                          {/if}
                         </div>
+                        <h4 class="font-bold text-sm text-gray-900 truncate">{map.name}</h4>
+                        <div class="text-xs text-gray-500 truncate">{map.stats.objectCount} objects</div>
                       </div>
                     </button>
                   {/each}
                 </div>
-              </div>
 
-              <button class="btn btn-primary btn-lg text-white" on:click={startWithDefaultMap}>
-                Play Default Map
-              </button>
-            {/if}
+                <!-- Right Arrow -->
+                <button
+                  class="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mr-2 transition-all"
+                  on:click={() => {
+                    const container = document.getElementById('fps-map-carousel')
+                    if (container) container.scrollBy({ left: 220, behavior: 'smooth' })
+                  }}
+                >
+                  <span class="text-xl font-bold">›</span>
+                </button>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-lg text-white" on:click={() => { if (selectedMap) selectMapAndStart(selectedMap); else startWithDefaultMap() }}>
+              Start Game
+            </button>
 
             <p class="text-gray-900 mt-6 text-sm">
               Controls: WASD to move, Mouse to look, Click to shoot, Space to jump, ESC to pause

@@ -4,8 +4,8 @@
   import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
   import { hideSidebar } from "$lib/stores/gameState"
 
-  // Hide sidebar when game starts, show when leaving
-  $: hideSidebar.set(hasStartedGame)
+  // Hide sidebar when actively playing, show on menu screens
+  $: hideSidebar.set(hasStartedGame && !showMapSelector)
 
   onDestroy(() => {
     hideSidebar.set(false)
@@ -396,12 +396,14 @@
 
       loader.load(ship.path, (gltf) => {
         shipModel = gltf.scene
-        // Center and scale the model - 2x larger
+        // Center and scale the model - sized to fit frame nicely
         const box = new THREE.Box3().setFromObject(shipModel)
         const center = box.getCenter(new THREE.Vector3())
         const size = box.getSize(new THREE.Vector3())
         const maxDim = Math.max(size.x, size.y, size.z)
-        const scale = 3.0 / maxDim  // 2x larger (was 1.5)
+        // Battle Carrier (variant3) is larger, so use smaller scale (2/3 of others)
+        const baseScale = ship.id === 'variant3' ? 1.33 : 2.0
+        const scale = baseScale / maxDim
         shipModel.scale.setScalar(scale)
         shipModel.position.sub(center.multiplyScalar(scale))
         previewScene.add(shipModel)
@@ -1093,10 +1095,17 @@
     lastShot = now
     if (!playerShip) return
 
-    // Calculate aim direction: align with camera center ray but originate from the ship to avoid vertical parallax
+    // Calculate aim direction: find where camera center ray hits a target plane, then aim from ship to that point
+    // This corrects the parallax between camera position and ship position
     const raycaster = new THREE.Raycaster()
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera)
-    const dir = raycaster.ray.direction.clone().normalize()
+
+    // Find a point along the camera ray at a reasonable target distance
+    const targetDistance = 100  // Distance ahead where crosshair actually points
+    const targetPoint = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(targetDistance))
+
+    // Calculate direction from ship to that target point
+    const dir = targetPoint.clone().sub(playerShip.position).normalize()
 
     let mesh: THREE.Mesh | THREE.Group
     let vel: THREE.Vector3, dmg: number, lt: number
@@ -2058,6 +2067,108 @@
           </div>
         </div>
 
+        <!-- Select a Map -->
+        <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-2xl font-bold text-gray-900">Select a Map</h3>
+            <a class="text-blue-600 font-semibold underline text-sm" href="/experiments/world-builder">
+              Build a Map →
+            </a>
+          </div>
+
+          <!-- Horizontal scrolling map carousel -->
+          <div class="relative">
+            <!-- Left Arrow -->
+            <button
+              class="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center shadow-lg -ml-2 transition-all"
+              on:click={() => {
+                const container = document.getElementById('map-carousel')
+                if (container) container.scrollBy({ left: -220, behavior: 'smooth' })
+              }}
+            >
+              <span class="text-xl font-bold">‹</span>
+            </button>
+
+            <!-- Map Cards Container -->
+            <div
+              id="map-carousel"
+              class="flex gap-4 overflow-x-auto scroll-smooth px-8 py-2"
+              style="scrollbar-width: none; -ms-overflow-style: none;"
+            >
+              <!-- Default Map - Always First -->
+              <button
+                class="flex-shrink-0 w-52 card bg-green-50 hover:bg-green-100 transition-all duration-200 cursor-pointer border-2 {selectedMap === null ? 'border-green-500 ring-2 ring-green-400' : 'border-green-300 hover:border-green-500'} shadow-lg hover:shadow-xl"
+                on:click={() => selectedMap = null}
+              >
+                <div class="card-body p-3">
+                  <div class="w-full h-24 rounded mb-2 overflow-hidden bg-gradient-to-br from-green-700 to-blue-800 flex items-center justify-center border border-green-300">
+                    {#if defaultMapThumbnail}
+                      <img src={defaultMapThumbnail} alt="Default Map" class="w-full h-full object-cover" />
+                    {:else}
+                      <div class="text-3xl opacity-70">🌍</div>
+                    {/if}
+                  </div>
+                  <h4 class="font-bold text-sm text-gray-900 truncate">Default Map</h4>
+                  <div class="text-xs text-gray-500">Procedural</div>
+                </div>
+              </button>
+
+              <!-- Custom Maps -->
+              {#each customMaps as map}
+                <button
+                  class="flex-shrink-0 w-52 card bg-purple-50 hover:bg-purple-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-purple-500 ring-2 ring-purple-400' : 'border-purple-300 hover:border-purple-500'} shadow-lg hover:shadow-xl"
+                  on:click={() => selectedMap = map}
+                >
+                  <div class="card-body p-3">
+                    <div class="absolute top-2 right-2 bg-purple-500 text-white text-xs px-2 py-0.5 rounded">Custom</div>
+                    <div class="w-full h-24 rounded mb-2 overflow-hidden bg-purple-100 flex items-center justify-center border border-purple-300">
+                      {#if map.thumbnail}
+                        <img src={map.thumbnail} alt={map.name} class="w-full h-full object-cover" />
+                      {:else}
+                        <div class="text-3xl opacity-50">🗺️</div>
+                      {/if}
+                    </div>
+                    <h4 class="font-bold text-sm text-gray-900 truncate">{map.name}</h4>
+                    <div class="text-xs text-gray-500 truncate">{map.stats.objectCount} objects</div>
+                  </div>
+                </button>
+              {/each}
+
+              <!-- Built-in Maps -->
+              {#each builtInMaps as map}
+                <button
+                  class="flex-shrink-0 w-52 card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl"
+                  on:click={() => selectedMap = map}
+                >
+                  <div class="card-body p-3">
+                    <div class="absolute top-2 right-2 bg-yellow-500 text-gray-900 text-xs px-2 py-0.5 rounded">Built-in</div>
+                    <div class="w-full h-24 rounded mb-2 overflow-hidden bg-yellow-100 flex items-center justify-center border border-yellow-300">
+                      {#if map.thumbnail}
+                        <img src={map.thumbnail} alt={map.name} class="w-full h-full object-cover" />
+                      {:else}
+                        <div class="text-3xl opacity-50">🗺️</div>
+                      {/if}
+                    </div>
+                    <h4 class="font-bold text-sm text-gray-900 truncate">{map.name}</h4>
+                    <div class="text-xs text-gray-500 truncate">{map.stats.objectCount} objects</div>
+                  </div>
+                </button>
+              {/each}
+            </div>
+
+            <!-- Right Arrow -->
+            <button
+              class="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mr-2 transition-all"
+              on:click={() => {
+                const container = document.getElementById('map-carousel')
+                if (container) container.scrollBy({ left: 220, behavior: 'smooth' })
+              }}
+            >
+              <span class="text-xl font-bold">›</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Difficulty Settings (matching Blocky Shooter) -->
         <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
           <h3 class="text-2xl font-bold text-gray-900 mb-4">Difficulty & Settings</h3>
@@ -2161,126 +2272,9 @@
           </div>
         </div>
 
-        <h3 class="text-2xl font-bold text-gray-900 mb-4">Select a Map</h3>
-        <div class="mb-3">
-          <a class="text-blue-600 font-semibold underline" href="/experiments/world-builder">
-            --&gt; BUILD A MAP &lt;--
-          </a>
-        </div>
-
-        {#if availableMaps.length === 0}
-          <div class="bg-yellow-50 p-8 rounded-lg mb-4 border-2 border-yellow-200">
-            <p class="text-lg mb-4 text-gray-900">No World Builder maps found.</p>
-            <p class="text-sm text-gray-600 mb-4">
-              Create maps in World Builder first, then play them here!
-            </p>
-            <button class="btn btn-primary btn-lg text-white" on:click={startGame}>
-              Play Default Map
-            </button>
-          </div>
-        {:else}
-          <div class="max-h-[500px] overflow-y-auto p-2 mb-6">
-            <!-- Default Map - Always First -->
-            <div class="mb-4">
-              <div class="flex justify-center">
-                <button
-                  class="card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap === null ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl w-64"
-                  on:click={() => selectedMap = null}
-                >
-                  <div class="card-body p-4">
-                    <div class="w-full h-32 rounded mb-2 overflow-hidden bg-gradient-to-br from-green-700 to-blue-800 flex items-center justify-center border border-yellow-300">
-                      {#if defaultMapThumbnail}
-                        <img
-                          src={defaultMapThumbnail}
-                          alt="Default Map"
-                          class="w-full h-full object-cover"
-                        />
-                      {:else}
-                        <div class="text-4xl opacity-70">🌍</div>
-                      {/if}
-                    </div>
-                    <h3 class="font-bold text-lg text-gray-900">Default Map</h3>
-                    <div class="text-xs text-gray-600">Procedurally generated</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <!-- Custom Maps Section -->
-            {#if customMaps.length > 0}
-              <div class="mb-4">
-                <h4 class="text-sm font-semibold text-purple-600 mb-2 text-center uppercase tracking-wide">Custom Maps</h4>
-                <div class="flex justify-center">
-                  <div class="inline-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {#each customMaps as map}
-                      <button
-                        class="card bg-purple-50 hover:bg-purple-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-purple-500 ring-2 ring-purple-400' : 'border-purple-300 hover:border-purple-500'} shadow-lg hover:shadow-xl"
-                        on:click={() => selectedMap = map}
-                      >
-                        <div class="card-body p-4">
-                          <div class="w-full h-32 rounded mb-2 overflow-hidden bg-purple-100 flex items-center justify-center border border-purple-300">
-                            {#if map.thumbnail}
-                              <img
-                                src={map.thumbnail}
-                                alt={map.name}
-                                class="w-full h-full object-cover"
-                              />
-                            {:else}
-                              <div class="text-4xl opacity-50">🗺️</div>
-                            {/if}
-                          </div>
-                          <h3 class="font-bold text-lg text-gray-900">{map.name}</h3>
-                          <div class="text-xs text-gray-600">
-                            {map.stats.objectCount} objects • {map.environment.timeOfDay} • {map.environment.weather}
-                          </div>
-                        </div>
-                      </button>
-                    {/each}
-                  </div>
-                </div>
-              </div>
-            {/if}
-
-            <!-- Built-in Maps Section -->
-            {#if builtInMaps.length > 0}
-              <div class="mb-4">
-                <h4 class="text-sm font-semibold text-yellow-600 mb-2 text-center uppercase tracking-wide">Built-in Maps</h4>
-                <div class="flex justify-center">
-                  <div class="inline-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {#each builtInMaps as map}
-                      <button
-                        class="card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl"
-                        on:click={() => selectedMap = map}
-                      >
-                        <div class="card-body p-4">
-                          <div class="w-full h-32 rounded mb-2 overflow-hidden bg-yellow-100 flex items-center justify-center border border-yellow-300">
-                            {#if map.thumbnail}
-                              <img
-                                src={map.thumbnail}
-                                alt={map.name}
-                                class="w-full h-full object-cover"
-                              />
-                            {:else}
-                              <div class="text-4xl opacity-50">🗺️</div>
-                            {/if}
-                          </div>
-                          <h3 class="font-bold text-lg text-gray-900">{map.name}</h3>
-                          <div class="text-xs text-gray-600">
-                            {map.stats.objectCount} objects • {map.environment.timeOfDay} • {map.environment.weather}
-                          </div>
-                        </div>
-                      </button>
-                    {/each}
-                  </div>
-                </div>
-              </div>
-            {/if}
-          </div>
-
-          <button class="btn btn-primary btn-lg text-white" on:click={startGame}>
-            Launch Mission
-          </button>
-        {/if}
+        <button class="btn btn-primary btn-lg text-white" on:click={startGame}>
+          Launch Mission
+        </button>
 
         <p class="text-gray-900 mt-6 text-sm">
           Controls: W/S forward/back, A/D strafe left/right, Mouse to aim, Shift to fire, Space for BOOST, Q/E for barrel rolls, ↑/↓ or 1-5 switch weapons, ESC to pause
