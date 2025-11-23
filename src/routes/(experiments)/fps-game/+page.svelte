@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte"
+  import { onMount, tick } from "svelte"
   import * as THREE from "three"
   import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js"
   import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js"
@@ -2599,6 +2599,9 @@
 
   let lastCollectedPowerUp = ''
   let showCollectionMessage = false
+  let lastWeaponChange = ''
+  let showWeaponChangeMessage = false
+  let weaponChangeKey = 0
 
   function collectPowerUp(powerUp: PowerUp) {
     // Immediately apply power-up effect
@@ -2624,6 +2627,20 @@
     score += 10
   }
 
+  async function showWeaponChangeFlash(name: string) {
+    lastWeaponChange = name
+    showWeaponChangeMessage = false // Reset to retrigger animation
+
+    await tick() // Ensure DOM updates before retriggering
+
+    weaponChangeKey += 1
+    showWeaponChangeMessage = true
+
+    setTimeout(() => {
+      showWeaponChangeMessage = false
+    }, 1200)
+  }
+
   function addWeaponToInventory(type: WeaponType, ammoAmount: number, name: string) {
     const existingWeapon = weaponInventory.find(w => w.type === type)
 
@@ -2639,7 +2656,13 @@
   }
 
   function switchWeapon(direction: 'next' | 'prev') {
-    if (weaponInventory.length <= 1) return
+    if (weaponInventory.length === 0) return
+
+    if (weaponInventory.length === 1) {
+      // Still show the flash so the user gets feedback even with one weapon
+      showWeaponChangeFlash(weaponInventory[0].name)
+      return
+    }
 
     if (direction === 'next') {
       currentWeaponIndex = (currentWeaponIndex + 1) % weaponInventory.length
@@ -2648,6 +2671,7 @@
     }
 
     currentWeapon = weaponInventory[currentWeaponIndex].type
+    showWeaponChangeFlash(weaponInventory[currentWeaponIndex].name)
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -2722,6 +2746,7 @@
         if (index < weaponInventory.length) {
           currentWeaponIndex = index
           currentWeapon = weaponInventory[index].type
+          showWeaponChangeFlash(weaponInventory[index].name)
         }
         break
     }
@@ -3176,7 +3201,12 @@
             <div class="mt-3 pt-3 border-t border-white/30">
               <div class="text-sm opacity-80 mb-2">Weapons (← → ↑ ↓ or 1-5)</div>
               {#each weaponInventory as weapon, index}
-                <div class="text-sm {index === currentWeaponIndex ? 'text-warning font-bold' : 'opacity-60'}">
+                <div
+                  class="text-sm {index === currentWeaponIndex ? 'text-warning font-bold' : 'opacity-60'}"
+                  style={showWeaponChangeMessage && index === currentWeaponIndex
+                    ? 'animation: flash 0.3s ease-in-out 6;'
+                    : ''}
+                >
                   {index + 1}. {weapon.name} {weapon.ammo === -1 ? '∞' : `(${weapon.ammo})`}
                 </div>
               {/each}
@@ -3245,6 +3275,19 @@
                 + {lastCollectedPowerUp}
               </div>
             </div>
+          {/if}
+
+          {#if showWeaponChangeMessage}
+            {#key weaponChangeKey}
+              <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none" style="margin-top: 40px;">
+                <div
+                  class="bg-purple-600/95 text-white px-6 py-3 rounded-xl shadow-2xl text-xl font-bold border-4 border-purple-300"
+                  style="animation: flash 0.3s ease-in-out 6;"
+                >
+                  Weapon: {lastWeaponChange}
+                </div>
+              </div>
+            {/key}
           {/if}
         {/if}
       </div>

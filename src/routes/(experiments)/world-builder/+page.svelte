@@ -220,7 +220,7 @@
     controls.dampingFactor = 0.05
     controls.maxPolarAngle = Math.PI / 2 - 0.1 // Prevent going below ground
     controls.minDistance = 5
-    controls.maxDistance = 100
+    controls.maxDistance = 1000
     controls.enablePan = true
     controls.panSpeed = 1.0
     controls.zoomSpeed = 2.0 // Increased zoom sensitivity

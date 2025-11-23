@@ -52,9 +52,12 @@
   ]
 
   let availableMaps: MapData[] = []
+  let customMaps: MapData[] = []  // User-created maps from localStorage
+  let builtInMaps: MapData[] = []  // Static maps from /3d-maps/
   let selectedMap: MapData | null = null
   let showMapSelector = true
   let isLoadingMap = false
+  let defaultMapThumbnail: string | null = null
 
   // Spaceship Selection
   interface SpaceshipOption {
@@ -298,12 +301,13 @@
     const stored = localStorage.getItem('worldBuilder_maps')
     if (stored) {
       try {
-        availableMaps = JSON.parse(stored)
+        customMaps = JSON.parse(stored)
       } catch (e) {
         console.error('Failed to load maps:', e)
-        availableMaps = []
+        customMaps = []
       }
     }
+    updateAvailableMaps()
   }
 
   async function loadStaticMaps() {
@@ -322,7 +326,25 @@
         console.error('Failed to load static map:', file, e)
       }
     }
-    mergeAvailableMaps(maps)
+    builtInMaps = maps
+    updateAvailableMaps()
+  }
+
+  function updateAvailableMaps() {
+    // Merge custom and built-in maps, avoiding duplicates
+    const existingIds = new Set(customMaps.map(m => m.id))
+    availableMaps = [...customMaps, ...builtInMaps.filter(m => !existingIds.has(m.id))]
+  }
+
+  // Load default map thumbnail for menu display
+  async function loadDefaultMapThumbnail() {
+    try {
+      const response = await fetch('/3d-maps/default_map.json')
+      const data: MapData = await response.json()
+      defaultMapThumbnail = data.thumbnail
+    } catch (e) {
+      console.error('Failed to load default map thumbnail:', e)
+    }
   }
 
   // Load model catalog for level auto-generation (same as FPS game)
@@ -415,6 +437,7 @@
     loadStaticMaps()
     initThree()
     loadModelCatalog()
+    loadDefaultMapThumbnail()
 
     // Render ship previews after a short delay to ensure DOM is ready
     setTimeout(renderShipPreviews, 100)
@@ -2156,46 +2179,102 @@
             </button>
           </div>
         {:else}
-          <div class="flex justify-center mb-6">
-            <div class="inline-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
-              <!-- Default Map Option -->
-              <button
-                class="card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap === null ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl"
-                on:click={() => selectedMap = null}
-              >
-                <div class="card-body p-4">
-                  <div class="w-full h-32 rounded mb-2 overflow-hidden bg-gradient-to-br from-green-700 to-blue-800 flex items-center justify-center border border-yellow-300">
-                    <div class="text-4xl opacity-70">🌍</div>
-                  </div>
-                  <h3 class="font-bold text-lg text-gray-900">Default Map</h3>
-                  <div class="text-xs text-gray-600">Procedurally generated</div>
-                </div>
-              </button>
-              {#each availableMaps as map}
+          <div class="max-h-[500px] overflow-y-auto p-2 mb-6">
+            <!-- Default Map - Always First -->
+            <div class="mb-4">
+              <div class="flex justify-center">
                 <button
-                  class="card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl"
-                  on:click={() => selectedMap = map}
+                  class="card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap === null ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl w-64"
+                  on:click={() => selectedMap = null}
                 >
                   <div class="card-body p-4">
-                    <div class="w-full h-32 rounded mb-2 overflow-hidden bg-yellow-100 flex items-center justify-center border border-yellow-300">
-                      {#if map.thumbnail}
+                    <div class="w-full h-32 rounded mb-2 overflow-hidden bg-gradient-to-br from-green-700 to-blue-800 flex items-center justify-center border border-yellow-300">
+                      {#if defaultMapThumbnail}
                         <img
-                          src={map.thumbnail}
-                          alt={map.name}
+                          src={defaultMapThumbnail}
+                          alt="Default Map"
                           class="w-full h-full object-cover"
                         />
                       {:else}
-                        <div class="text-4xl opacity-50">🗺️</div>
+                        <div class="text-4xl opacity-70">🌍</div>
                       {/if}
                     </div>
-                    <h3 class="font-bold text-lg text-gray-900">{map.name}</h3>
-                    <div class="text-xs text-gray-600">
-                      {map.stats.objectCount} objects • {map.environment.timeOfDay} • {map.environment.weather}
-                    </div>
+                    <h3 class="font-bold text-lg text-gray-900">Default Map</h3>
+                    <div class="text-xs text-gray-600">Procedurally generated</div>
                   </div>
                 </button>
-              {/each}
+              </div>
             </div>
+
+            <!-- Custom Maps Section -->
+            {#if customMaps.length > 0}
+              <div class="mb-4">
+                <h4 class="text-sm font-semibold text-purple-600 mb-2 text-center uppercase tracking-wide">Custom Maps</h4>
+                <div class="flex justify-center">
+                  <div class="inline-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {#each customMaps as map}
+                      <button
+                        class="card bg-purple-50 hover:bg-purple-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-purple-500 ring-2 ring-purple-400' : 'border-purple-300 hover:border-purple-500'} shadow-lg hover:shadow-xl"
+                        on:click={() => selectedMap = map}
+                      >
+                        <div class="card-body p-4">
+                          <div class="w-full h-32 rounded mb-2 overflow-hidden bg-purple-100 flex items-center justify-center border border-purple-300">
+                            {#if map.thumbnail}
+                              <img
+                                src={map.thumbnail}
+                                alt={map.name}
+                                class="w-full h-full object-cover"
+                              />
+                            {:else}
+                              <div class="text-4xl opacity-50">🗺️</div>
+                            {/if}
+                          </div>
+                          <h3 class="font-bold text-lg text-gray-900">{map.name}</h3>
+                          <div class="text-xs text-gray-600">
+                            {map.stats.objectCount} objects • {map.environment.timeOfDay} • {map.environment.weather}
+                          </div>
+                        </div>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+              </div>
+            {/if}
+
+            <!-- Built-in Maps Section -->
+            {#if builtInMaps.length > 0}
+              <div class="mb-4">
+                <h4 class="text-sm font-semibold text-yellow-600 mb-2 text-center uppercase tracking-wide">Built-in Maps</h4>
+                <div class="flex justify-center">
+                  <div class="inline-grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {#each builtInMaps as map}
+                      <button
+                        class="card bg-yellow-50 hover:bg-yellow-100 transition-all duration-200 cursor-pointer border-2 {selectedMap?.id === map.id ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-300 hover:border-yellow-500'} shadow-lg hover:shadow-xl"
+                        on:click={() => selectedMap = map}
+                      >
+                        <div class="card-body p-4">
+                          <div class="w-full h-32 rounded mb-2 overflow-hidden bg-yellow-100 flex items-center justify-center border border-yellow-300">
+                            {#if map.thumbnail}
+                              <img
+                                src={map.thumbnail}
+                                alt={map.name}
+                                class="w-full h-full object-cover"
+                              />
+                            {:else}
+                              <div class="text-4xl opacity-50">🗺️</div>
+                            {/if}
+                          </div>
+                          <h3 class="font-bold text-lg text-gray-900">{map.name}</h3>
+                          <div class="text-xs text-gray-600">
+                            {map.stats.objectCount} objects • {map.environment.timeOfDay} • {map.environment.weather}
+                          </div>
+                        </div>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+              </div>
+            {/if}
           </div>
 
           <button class="btn btn-primary btn-lg text-white" on:click={startGame}>
