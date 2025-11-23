@@ -66,6 +66,7 @@
   // Game Configuration
   type AutoMoveSpeed = 'off' | 'slow' | 'medium' | 'hyper'
   type MouseInputType = 'auto' | 'trackpad' | 'external'
+  type PowerUpFrequency = 'sparse' | 'normal' | 'carnage'
   interface GameConfig {
     difficulty: 'easy' | 'normal' | 'hard'
     startingHealth: number
@@ -77,6 +78,7 @@
     mouseSensitivity: number
     autoMoveSpeed: AutoMoveSpeed
     mouseInput: MouseInputType
+    powerUpFrequency: PowerUpFrequency
   }
 
   const autoMoveSpeeds: Record<AutoMoveSpeed, number> = {
@@ -86,14 +88,23 @@
     hyper: 30
   }
 
+  // Power-up drop rates: how many kills before guaranteed drop
+  const powerUpDropRates: Record<PowerUpFrequency, number> = {
+    sparse: 3,    // Every 3rd kill
+    normal: 2,    // Every 2nd kill
+    carnage: 1    // Every kill
+  }
+  let killsSinceLastDrop = 0
+
   // Trackpad detection state
   let detectedInputType: 'unknown' | 'trackpad' | 'external' = 'unknown'
   let movementSamples: { delta: number; time: number }[] = []
   let lastMovementTime = 0
 
-  // Continuous motion for trackpad - view keeps moving in last direction
+  // Continuous motion for trackpad - view keeps moving while finger is on pad
   let continuousMotion = { x: 0, y: 0 }
-  let motionDecayRate = 0.95  // How quickly motion decays when not touching trackpad
+  let isFingerOnTrackpad = false  // Detect if finger is still touching
+  const trackpadLiftThreshold = 80  // ms - if no movement for this long, finger lifted
 
   function getEffectiveInputType(): 'trackpad' | 'external' {
     if (gameConfig.mouseInput === 'auto') {
@@ -112,7 +123,8 @@
     enemyFireRate: 2000,
     mouseSensitivity: 1.0,  // Default to 1.0 (comfortable), range 0.5-2.0
     autoMoveSpeed: 'medium',  // Default to medium auto-move
-    mouseInput: 'auto'  // Auto-detect trackpad vs external mouse
+    mouseInput: 'auto',  // Auto-detect trackpad vs external mouse
+    powerUpFrequency: 'normal'  // Every 2nd kill drops a power-up
   }
 
   const difficultyPresets: Record<GameConfig['difficulty'], Partial<GameConfig>> = {
@@ -639,6 +651,16 @@
     else { isBossLevel = false; for (let i = 0; i < Math.min(gameConfig.enemyCount + level, 15); i++) setTimeout(() => spawnEnemy(types[Math.floor(Math.random() * types.length)]), i * 300) }
   }
 
+  // Check if we should drop a power-up based on frequency setting
+  function trySpawnPowerUpOnKill() {
+    killsSinceLastDrop++
+    const dropRate = powerUpDropRates[gameConfig.powerUpFrequency]
+    if (killsSinceLastDrop >= dropRate) {
+      killsSinceLastDrop = 0
+      spawnPowerUp()
+    }
+  }
+
   function spawnPowerUp() {
     const types: PowerUpType[] = ['health', 'ammo', 'boost', 'weapon-missile', 'weapon-plasma', 'weapon-chain', 'weapon-drone', 'weapon-scatter']
     const type = types[Math.floor(Math.random() * types.length)]
@@ -778,13 +800,13 @@
     }
 
     lastMovementTime = now
+    isFingerOnTrackpad = true  // Receiving events means finger is on trackpad
 
-    // For trackpad mode: set continuous motion direction
-    if (getEffectiveInputType() === 'trackpad') {
-      // Trackpad: accumulate into continuous motion (view keeps drifting)
-      const trackpadSensitivity = 0.15  // Lower sensitivity for continuous motion
-      continuousMotion.x = e.movementX * trackpadSensitivity
-      continuousMotion.y = e.movementY * trackpadSensitivity
+    // For trackpad mode: store last movement direction (view continues while finger down)
+    if (getEffectiveInputType() === 'trackpad' && delta > 0.5) {
+      // Store the movement direction - will continue until finger lifts
+      continuousMotion.x = e.movementX
+      continuousMotion.y = e.movementY
     }
 
     // Store raw mouse delta - sensitivity applied in updatePlayer only
@@ -974,23 +996,25 @@
     const sensitivity = baseSensitivity * gameConfig.mouseSensitivity
     const isTrackpadMode = getEffectiveInputType() === 'trackpad'
 
-    // For trackpad: decay continuous motion when no input received
+    // Trackpad finger lift detection
     const now = Date.now()
     const timeSinceLastMove = now - lastMovementTime
-    if (isTrackpadMode && timeSinceLastMove > 50) {
-      // No recent input - decay the continuous motion
-      continuousMotion.x *= motionDecayRate
-      continuousMotion.y *= motionDecayRate
-      // Stop very small movements
-      if (Math.abs(continuousMotion.x) < 0.001) continuousMotion.x = 0
-      if (Math.abs(continuousMotion.y) < 0.001) continuousMotion.y = 0
+    if (isTrackpadMode && timeSinceLastMove > trackpadLiftThreshold) {
+      // No events for a while = finger lifted off trackpad
+      isFingerOnTrackpad = false
+      continuousMotion.x = 0
+      continuousMotion.y = 0
     }
 
     // Update yaw and pitch from mouse input (tracking angles separately)
     if (isTrackpadMode) {
-      // Trackpad mode: use continuous motion (view keeps drifting in last direction)
-      shipYaw -= continuousMotion.x * sensitivity * 20  // Amplify for continuous effect
-      shipPitch -= continuousMotion.y * sensitivity * 20
+      // Trackpad mode: view keeps moving while finger is on pad
+      if (isFingerOnTrackpad) {
+        const trackpadSensitivity = sensitivity * 0.5  // Slightly slower for continuous
+        shipYaw -= continuousMotion.x * trackpadSensitivity
+        shipPitch -= continuousMotion.y * trackpadSensitivity
+      }
+      // When finger lifts, motion stops immediately (no drift)
     } else {
       // External mouse: direct 1:1 control
       shipYaw -= mouseMovement.x * sensitivity
@@ -1249,7 +1273,7 @@
                     score += nextTarget.type === 'boss' ? 500 : nextTarget.type === 'tank' ? 100 : nextTarget.type === 'fast' ? 50 : 25
                     kills++
                     if (nextTarget.type === 'boss') { bossEnemy = null; bossHealth = 0; isBossLevel = false }
-                    if (Math.random() < 0.3) spawnPowerUp()
+                    trySpawnPowerUpOnKill()
                   }
                 }
               }
@@ -1261,7 +1285,7 @@
               score += e.type === 'boss' ? 500 : e.type === 'tank' ? 100 : e.type === 'fast' ? 50 : 25
               kills++
               if (e.type === 'boss') { bossEnemy = null; bossHealth = 0; isBossLevel = false }
-              if (Math.random() < 0.3) spawnPowerUp()
+              trySpawnPowerUpOnKill()
             }
             scene.remove(p.mesh); return false
           }
@@ -1401,7 +1425,8 @@
     isBossLevel = false; bossEnemy = null; bossHealth = 0; bossMaxHealth = 0
     weaponInventory = [{ type: 'laser', ammo: -1, name: 'Laser Cannon' }]; currentWeaponIndex = 0
     boostCharges = 0; boostActive = false; boostEndTime = 0
-    continuousMotion = { x: 0, y: 0 }; movementSamples = []; lastMovementTime = 0
+    continuousMotion = { x: 0, y: 0 }; movementSamples = []; lastMovementTime = 0; isFingerOnTrackpad = false
+    killsSinceLastDrop = 0
     velocity.set(0, 0, 0)
     bankAngle = 0
     barrelRollAngle = 0
@@ -1614,7 +1639,35 @@
                 <div class="text-xs opacity-70">Direct</div>
               </button>
             </div>
-            <div class="text-xs text-gray-500 mt-1">Trackpad mode: view continues moving in the direction you swipe</div>
+            <div class="text-xs text-gray-500 mt-1">Trackpad mode: view continues moving while finger is on pad</div>
+          </div>
+
+          <!-- Power-up Frequency -->
+          <div class="mb-4">
+            <label class="label text-sm font-semibold">Power-up Drops</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                class="btn btn-sm {gameConfig.powerUpFrequency === 'sparse' ? 'btn-warning' : 'btn-outline'}"
+                on:click={() => gameConfig.powerUpFrequency = 'sparse'}
+              >
+                Sparse
+                <div class="text-xs opacity-70">Every 3 kills</div>
+              </button>
+              <button
+                class="btn btn-sm {gameConfig.powerUpFrequency === 'normal' ? 'btn-primary' : 'btn-outline'}"
+                on:click={() => gameConfig.powerUpFrequency = 'normal'}
+              >
+                Normal
+                <div class="text-xs opacity-70">Every 2 kills</div>
+              </button>
+              <button
+                class="btn btn-sm {gameConfig.powerUpFrequency === 'carnage' ? 'btn-error' : 'btn-outline'}"
+                on:click={() => gameConfig.powerUpFrequency = 'carnage'}
+              >
+                Carnage
+                <div class="text-xs opacity-70">Every kill</div>
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-left">
