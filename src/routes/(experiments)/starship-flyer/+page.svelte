@@ -64,6 +64,7 @@
   let selectedSpaceship: SpaceshipOption = spaceshipOptions[0]
 
   // Game Configuration
+  type AutoMoveSpeed = 'off' | 'slow' | 'medium' | 'hyper'
   interface GameConfig {
     difficulty: 'easy' | 'normal' | 'hard'
     startingHealth: number
@@ -73,6 +74,14 @@
     enemySpeed: number
     enemyFireRate: number
     mouseSensitivity: number
+    autoMoveSpeed: AutoMoveSpeed
+  }
+
+  const autoMoveSpeeds: Record<AutoMoveSpeed, number> = {
+    off: 0,
+    slow: 8,
+    medium: 15,
+    hyper: 30
   }
 
   let gameConfig: GameConfig = {
@@ -83,7 +92,8 @@
     playerDamage: 25,
     enemySpeed: 8.0,
     enemyFireRate: 2000,
-    mouseSensitivity: 1.0  // Default to 1.0 (comfortable), range 0.5-2.0
+    mouseSensitivity: 1.0,  // Default to 1.0 (comfortable), range 0.5-2.0
+    autoMoveSpeed: 'medium'  // Default to medium auto-move
   }
 
   const difficultyPresets: Record<GameConfig['difficulty'], Partial<GameConfig>> = {
@@ -123,11 +133,10 @@
   const acceleration = 20
   const baseTurnSpeed = 2.0
   const rollSpeed = 3.0
-  let isBoosting = false
   let barrelRollAngle = 0
-  let bankAngle = 0  // For A/D banking
+  let bankAngle = 0  // For A/D strafing visual bank
   let shipSwayTime = 0 // For ship sway animation
-  let isFiring = false  // For continuous fire with spacebar
+  let isFiring = false  // For continuous fire with shift key
 
   // Quaternion-based rotation tracking (avoids gimbal lock)
   let shipYaw = 0    // Horizontal rotation (left/right)
@@ -190,12 +199,18 @@
     'weapon-scatter': 0xff8800      // Orange
   }
 
+  // Boost charges (activated by spacebar)
+  let boostCharges = 0
+  let boostActive = false
+  let boostEndTime = 0
+  const boostDuration = 3000  // 3 seconds of boost per charge
+
   // Power-up collection alert
   let powerUpAlert: { message: string; color: string; timestamp: number } | null = null
   const powerUpNames: Record<string, { name: string; color: string }> = {
     health: { name: 'HEALTH +30', color: '#ff4444' },
     ammo: { name: 'AMMO +10', color: '#44ff44' },
-    boost: { name: 'SPEED BOOST', color: '#44ffff' },
+    boost: { name: 'BOOST +1', color: '#44ffff' },
     'weapon-missile': { name: 'MISSILES +10', color: '#ffff44' },
     'weapon-plasma': { name: 'PLASMA +5', color: '#ff44ff' },
     'weapon-chain': { name: 'CHAIN LIGHTNING +8', color: '#44aaff' },
@@ -691,8 +706,15 @@
 
   function handleKeyDown(e: KeyboardEvent) {
     keys[e.key.toLowerCase()] = true
-    if (e.key === ' ') { e.preventDefault(); isFiring = true }  // Spacebar for firing
-    if (e.key === 'Shift') { e.preventDefault(); isBoosting = true }  // Shift for boost
+    if (e.key === 'Shift') { e.preventDefault(); isFiring = true }  // Shift for firing
+    // Spacebar activates boost if charges available
+    if (e.key === ' ' && boostCharges > 0 && !boostActive) {
+      e.preventDefault()
+      boostCharges--
+      boostActive = true
+      boostEndTime = Date.now() + boostDuration
+      powerUpAlert = { message: 'BOOST ACTIVATED!', color: '#44ffff', timestamp: Date.now() }
+    }
     if (e.key >= '1' && e.key <= '5') { const i = parseInt(e.key) - 1; if (i < weaponInventory.length) currentWeaponIndex = i }
     // Arrow up/down to cycle weapons
     if (e.key === 'ArrowUp' && weaponInventory.length > 1) {
@@ -708,8 +730,7 @@
 
   function handleKeyUp(e: KeyboardEvent) {
     keys[e.key.toLowerCase()] = false
-    if (e.key === ' ') isFiring = false
-    if (e.key === 'Shift') isBoosting = false
+    if (e.key === 'Shift') isFiring = false
   }
 
   function handleMouseMove(e: MouseEvent) {
@@ -884,7 +905,12 @@
   function updatePlayer(delta: number) {
     if (!playerShip) return
 
-    // Continuous fire when spacebar OR mouse button is held
+    // Check if boost has expired
+    if (boostActive && Date.now() > boostEndTime) {
+      boostActive = false
+    }
+
+    // Continuous fire when shift OR mouse button is held
     if (isFiring || isMouseDown) shoot()
 
     // Update sway time
@@ -909,14 +935,16 @@
     // Reset mouse delta after use
     mouseMovement.x = 0; mouseMovement.y = 0
 
-    // A/D banking - update yaw for turning
-    const bankSpeed = 2.0
+    // A/D strafe left/right (FPS-style controls)
+    let strafeVelocity = new THREE.Vector3()
+    const strafeSpeed = 20
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(playerShip.quaternion)
     if (keys['a']) {
-      bankAngle = Math.min(bankAngle + bankSpeed * delta, 0.5)
-      shipYaw += bankSpeed * delta * 0.5
+      strafeVelocity.add(right.clone().multiplyScalar(-strafeSpeed))
+      bankAngle = Math.min(bankAngle + 2.0 * delta, 0.3)  // Slight visual bank
     } else if (keys['d']) {
-      bankAngle = Math.max(bankAngle - bankSpeed * delta, -0.5)
-      shipYaw -= bankSpeed * delta * 0.5
+      strafeVelocity.add(right.clone().multiplyScalar(strafeSpeed))
+      bankAngle = Math.max(bankAngle - 2.0 * delta, -0.3)  // Slight visual bank
     } else {
       bankAngle *= 0.9
     }
@@ -950,17 +978,25 @@
     const up = new THREE.Vector3(0, 1, 0)
     let target = new THREE.Vector3()
 
-    // W/S control forward/back thrust
+    // Auto-move forward based on setting
+    const autoMoveForce = autoMoveSpeeds[gameConfig.autoMoveSpeed]
+    if (autoMoveForce > 0) {
+      target.add(fwd.clone().multiplyScalar(autoMoveForce))
+    }
+
+    // W/S control forward/back thrust (adds to auto-move)
     if (keys['w']) target.add(fwd.clone().multiplyScalar(acceleration))
     if (keys['s']) target.add(fwd.clone().multiplyScalar(-acceleration * 0.5))
     // Control for up/down
     if (keys['control']) target.add(up.clone().multiplyScalar(-acceleration * 0.5))
 
-    // Add barrel roll velocity
+    // Add strafe velocity (A/D)
+    target.add(strafeVelocity)
+    // Add barrel roll velocity (Q/E)
     target.add(barrelRollVelocity)
 
     velocity.lerp(target, delta * 3)
-    velocity.clampLength(0, maxSpeed * (isBoosting ? 2 : 1))
+    velocity.clampLength(0, maxSpeed * (boostActive ? 2 : 1))
     playerShip.position.add(velocity.clone().multiplyScalar(delta))
 
     if (playerShip.position.y < 2) { playerShip.position.y = 2; velocity.y = Math.max(0, velocity.y) }
@@ -1215,7 +1251,7 @@
 
         if (p.type === 'health') health = Math.min(health + 30, 100)
         else if (p.type === 'ammo') weaponInventory.forEach(w => { if (w.ammo !== -1) w.ammo += 10 })  // Refill all weapons with limited ammo
-        else if (p.type === 'boost') { /* Speed boost handled elsewhere or as temporary effect */ }
+        else if (p.type === 'boost') { boostCharges++ }  // Add boost charge to inventory
         else if (p.type === 'weapon-missile') addWeapon('missile', 10, 'Missiles')
         else if (p.type === 'weapon-plasma') addWeapon('plasma', 5, 'Plasma Cannon')
         else if (p.type === 'weapon-chain') addWeapon('chain', 8, 'Chain Lightning')
@@ -1248,7 +1284,7 @@
     gameConfig.enemyFireRate = Math.max(gameConfig.enemyFireRate * 0.95, 800)
     health = Math.min(health + 30, 100)
     spawnWave()
-    for (let i = 0; i < 3; i++) spawnPowerUp()
+    // Power-ups only drop from enemies now
     isLoadingLevel = false
   }
 
@@ -1293,6 +1329,7 @@
     score = 0; level = 1; health = gameConfig.startingHealth; kills = 0; nextLevelScore = 1000
     isBossLevel = false; bossEnemy = null; bossHealth = 0; bossMaxHealth = 0
     weaponInventory = [{ type: 'laser', ammo: -1, name: 'Laser Cannon' }]; currentWeaponIndex = 0
+    boostCharges = 0; boostActive = false; boostEndTime = 0
     velocity.set(0, 0, 0)
     bankAngle = 0
     barrelRollAngle = 0
@@ -1323,7 +1360,7 @@
     isSpawning = false
     isPlaying = true
     spawnWave()
-    for (let i = 0; i < 5; i++) spawnPowerUp()
+    // Power-ups only drop from enemies
     renderer.domElement.requestPointerLock()
   }
 
@@ -1454,6 +1491,29 @@
             </button>
           </div>
 
+          <!-- Auto-Move Speed -->
+          <div class="mb-4">
+            <label class="label text-sm font-semibold">Auto-Move Speed</label>
+            <div class="grid grid-cols-4 gap-2">
+              <button
+                class="btn btn-sm {gameConfig.autoMoveSpeed === 'off' ? 'btn-neutral' : 'btn-outline'}"
+                on:click={() => gameConfig.autoMoveSpeed = 'off'}
+              >Off</button>
+              <button
+                class="btn btn-sm {gameConfig.autoMoveSpeed === 'slow' ? 'btn-info' : 'btn-outline'}"
+                on:click={() => gameConfig.autoMoveSpeed = 'slow'}
+              >Slow</button>
+              <button
+                class="btn btn-sm {gameConfig.autoMoveSpeed === 'medium' ? 'btn-primary' : 'btn-outline'}"
+                on:click={() => gameConfig.autoMoveSpeed = 'medium'}
+              >Medium</button>
+              <button
+                class="btn btn-sm {gameConfig.autoMoveSpeed === 'hyper' ? 'btn-error' : 'btn-outline'}"
+                on:click={() => gameConfig.autoMoveSpeed = 'hyper'}
+              >Hyper</button>
+            </div>
+          </div>
+
           <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-left">
             <div>
               <label class="label text-xs">Starting Health: {gameConfig.startingHealth}</label>
@@ -1539,7 +1599,7 @@
         {/if}
 
         <p class="text-gray-900 mt-6 text-sm">
-          Controls: W/S forward/back, A/D bank left/right, Mouse to aim, Space to fire, Shift for BOOST, Q/E for barrel rolls, ↑/↓ or 1-5 switch weapons, ESC to pause
+          Controls: W/S forward/back, A/D strafe left/right, Mouse to aim, Shift to fire, Space for BOOST, Q/E for barrel rolls, ↑/↓ or 1-5 switch weapons, ESC to pause
         </p>
       </div>
     </div>
@@ -1609,7 +1669,7 @@
       </div>
     {/if}
     <div class="absolute top-4 right-4 text-white font-bold z-10 bg-black/70 p-4 rounded-lg border-2 border-red-500"><div class="text-xl text-red-400">HOSTILES</div><div class="text-4xl text-center">{enemies.length}</div></div>
-    <div class="absolute bottom-4 left-4 text-white font-bold z-10 bg-black/70 p-4 rounded-lg border-2 border-cyan-500"><div class="text-sm">SPEED</div><div class="w-32 bg-gray-700 h-3 rounded-full overflow-hidden"><div class="h-full transition-all {isBoosting ? 'bg-gradient-to-r from-yellow-400 to-red-500' : 'bg-gradient-to-r from-cyan-400 to-blue-500'}" style="width: {Math.min(100, (velocity.length() / maxSpeed) * 100)}%"></div></div>{#if isBoosting}<div class="text-yellow-400 text-xs animate-pulse mt-1">BOOST!</div>{/if}</div>
+    <div class="absolute bottom-4 left-4 text-white font-bold z-10 bg-black/70 p-4 rounded-lg border-2 border-cyan-500"><div class="text-sm">SPEED</div><div class="w-32 bg-gray-700 h-3 rounded-full overflow-hidden"><div class="h-full transition-all {boostActive ? 'bg-gradient-to-r from-yellow-400 to-red-500' : 'bg-gradient-to-r from-cyan-400 to-blue-500'}" style="width: {Math.min(100, (velocity.length() / maxSpeed) * 100)}%"></div></div>{#if boostActive}<div class="text-yellow-400 text-xs animate-pulse mt-1">BOOST ACTIVE!</div>{/if}</div>
     <!-- Power-up/Weapon Status -->
     <div class="absolute bottom-4 right-4 text-white font-bold z-10 bg-black/70 p-4 rounded-lg border-2 border-yellow-500">
       <div class="text-sm text-yellow-400 mb-2">POWER-UPS</div>
@@ -1632,8 +1692,13 @@
             <div class="text-xs mt-1">{w.ammo === -1 ? '∞' : w.ammo}</div>
           </div>
         {/each}
+        <!-- Boost Charges -->
+        <div class="text-center p-1 {boostActive ? 'ring-2 ring-cyan-400 rounded animate-pulse' : ''}">
+          <div class="w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-xs font-bold">B</div>
+          <div class="text-xs mt-1">{boostCharges}</div>
+        </div>
       </div>
-      <div class="text-xs text-gray-400 mt-2">↑↓ to switch</div>
+      <div class="text-xs text-gray-400 mt-2">↑↓ weapons | Space boost</div>
     </div>
   {/if}
 
