@@ -43,6 +43,14 @@
     }
   }
 
+  const staticMapFiles = [
+    'Basic_Town.json',
+    'Burnt_Tree_Map.json',
+    'Farm_City.json',
+    'Spread_Out_Town.json',
+    'Windmills___Such_.json'
+  ]
+
   let availableMaps: MapData[] = []
   let selectedMap: MapData | null = null
   let showMapSelector = true
@@ -173,8 +181,10 @@
   const baseTurnSpeed = 2.0
   const rollSpeed = 3.0
   let barrelRollAngle = 0
+  let rollAngularVelocity = 0
   let bankAngle = 0  // For A/D strafing visual bank
   let shipSwayTime = 0 // For ship sway animation
+  let smoothedSway = 0  // Dampens quick roll jitter from mouse x movement
   let isFiring = false  // For continuous fire with shift key
 
   // Quaternion-based rotation tracking (avoids gimbal lock)
@@ -256,12 +266,32 @@
     'weapon-drone': { name: 'DRONE SWARM +3', color: '#88ff44' },
     'weapon-scatter': { name: 'SCATTER SHOT +15', color: '#ff8844' }
   }
+  const weaponFlashColors: Record<Weapon['type'], string> = {
+    laser: '#44ffff',
+    missile: '#ffcc66',
+    plasma: '#ff66ff',
+    chain: '#66ccff',
+    drone: '#a6ff5c',
+    scatter: '#ff9944'
+  }
 
   // Particles
-  interface Particle { mesh: THREE.Mesh; velocity: THREE.Vector3; lifetime: number; maxLifetime: number }
+  interface Particle { mesh: THREE.Mesh; velocity: THREE.Vector3; lifetime: number; maxLifetime: number; scaleGrowth?: number }
   let particles: Particle[] = []
 
   let solidObjects: THREE.Object3D[] = []
+
+  function mergeAvailableMaps(maps: MapData[]) {
+    const existingIds = new Set(availableMaps.map(m => m.id))
+    const merged = [...availableMaps]
+    maps.forEach(map => {
+      if (!existingIds.has(map.id)) {
+        merged.push(map)
+        existingIds.add(map.id)
+      }
+    })
+    availableMaps = merged
+  }
 
   function loadAvailableMaps() {
     // Use same localStorage key as Blocky Shooter
@@ -274,6 +304,25 @@
         availableMaps = []
       }
     }
+  }
+
+  async function loadStaticMaps() {
+    const maps: MapData[] = []
+    for (const file of staticMapFiles) {
+      try {
+        const response = await fetch(`/3d-maps/${file}`)
+        if (!response.ok) continue
+        const data: MapData = await response.json()
+        maps.push({
+          ...data,
+          id: data.id ?? file,
+          name: data.name ?? file.replace('.json', '')
+        })
+      } catch (e) {
+        console.error('Failed to load static map:', file, e)
+      }
+    }
+    mergeAvailableMaps(maps)
   }
 
   // Load model catalog for level auto-generation (same as FPS game)
@@ -363,6 +412,7 @@
 
   onMount(() => {
     loadAvailableMaps()
+    loadStaticMaps()
     initThree()
     loadModelCatalog()
 
@@ -385,7 +435,7 @@
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mousedown', handleMouseDown)
       window.removeEventListener('mouseup', handleMouseUp)
-      window.removeEventListener('resize', handleResize)
+      window.addEventListener('resize', handleResize)
       document.removeEventListener('pointerlockchange', handlePointerLockChange)
       cancelAnimationFrame(animationId)
       cleanupShipPreviews()
@@ -393,9 +443,41 @@
     }
   })
 
+  function createStarfield() {
+    const starCount = 8500
+    const starVertices: number[] = []
+    for (let i = 0; i < starCount; i++) {
+      const x = THREE.MathUtils.randFloatSpread(1500)
+      const y = THREE.MathUtils.randFloatSpread(1500)
+      const z = THREE.MathUtils.randFloatSpread(1500)
+      if (new THREE.Vector3(x, y, z).length() < 100) continue
+      starVertices.push(x, y, z)
+    }
+
+    const starGeometry = new THREE.BufferGeometry()
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3))
+
+    // Bright, slightly larger stars for readability
+    const primaryStars = new THREE.Points(
+      starGeometry,
+      new THREE.PointsMaterial({ color: 0xe8f3ff, size: 0.9, transparent: true, opacity: 0.9 })
+    )
+    scene.add(primaryStars)
+
+    // Soft tinted layer for depth and extra sparkle
+    const secondaryStars = new THREE.Points(
+      starGeometry.clone(),
+      new THREE.PointsMaterial({ color: 0x9fc7ff, size: 0.6, transparent: true, opacity: 0.6 })
+    )
+    secondaryStars.scale.setScalar(1.2)
+    scene.add(secondaryStars)
+  }
+
   function initThree() {
     scene = new THREE.Scene()
-    scene.background = new THREE.Color(0x87ceeb)
+    scene.background = new THREE.Color(0x0a1326)
+
+    createStarfield();
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 2000)
     camera.position.set(0, 5, 10)
@@ -408,12 +490,11 @@
     clock = new THREE.Clock()
 
     // Lighting
-    scene.add(new THREE.AmbientLight(0x404040, 0.6))
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1)
+    scene.add(new THREE.AmbientLight(0xcccccc, 0.8)) // Brighter ambient for space
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5) // Brighter sun
     dirLight.position.set(50, 100, 50)
     dirLight.castShadow = true
     scene.add(dirLight)
-    scene.add(new THREE.HemisphereLight(0x87ceeb, 0x2d5016, 0.5))
   }
 
   async function loadPlayerShip() {
@@ -463,12 +544,14 @@
     solidObjects.forEach(obj => scene.remove(obj))
     solidObjects = []
 
-    applyEnvironment(map.environment)
+    // We want a space background for all levels, so we don't apply the map's environment.
+    // applyEnvironment(map.environment)
 
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.8 }))
-    ground.rotation.x = -Math.PI / 2
-    ground.receiveShadow = true
-    scene.add(ground)
+    // Also removing the ground plane.
+    // const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.8 }))
+    // ground.rotation.x = -Math.PI / 2
+    // ground.receiveShadow = true
+    // scene.add(ground)
 
     for (const obj of map.objects) {
       try {
@@ -487,13 +570,13 @@
 
   function applyEnvironment(env: MapData['environment']) {
     const colors: Record<string, { sky: number; fog: number }> = {
-      dawn: { sky: 0xffd4a0, fog: 0xffd4a0 },
-      day: { sky: 0x87ceeb, fog: 0x87ceeb },
-      sunset: { sky: 0xff6b4a, fog: 0xff6b4a },
-      night: { sky: 0x0a0a2e, fog: 0x0a0a2e }
+      dawn: { sky: 0xffd4a0, fog: 0x111111 }, // dark fog
+      day: { sky: 0x87ceeb, fog: 0x111111 }, // dark fog
+      sunset: { sky: 0xff6b4a, fog: 0x111111 }, // dark fog
+      night: { sky: 0x0a0a2e, fog: 0x000000 } // black fog
     }
     const c = colors[env.timeOfDay]
-    scene.background = new THREE.Color(c.sky)
+    // scene.background = new THREE.Color(c.sky) // REMOVED
     // Fog density from map can be 0-200+, need very small multiplier for FogExp2
     // A density of 0.002-0.005 gives visible fog, 200 * 0.00002 = 0.004
     scene.fog = env.fogDensity > 0 ? new THREE.FogExp2(c.fog, env.fogDensity * 0.00002) : null
@@ -504,37 +587,55 @@
     try {
       const response = await fetch('/3d-maps/default_map.json')
       const defaultMapData: MapData = await response.json()
-      await loadMap(defaultMapData)
+      // We still want space background, so don't apply environment from map directly.
+      // Instead, we just load the objects.
+      isLoadingMap = true
+      const loader = new GLTFLoader()
+      solidObjects.forEach(obj => scene.remove(obj))
+      solidObjects = []
+
+      // Don't apply environment, we want space!
+      // applyEnvironment(defaultMapData.environment)
+
+      for (const obj of defaultMapData.objects) {
+        try {
+          const gltf = await loader.loadAsync(obj.modelPath)
+          const mesh = gltf.scene
+          mesh.position.set(obj.position.x, obj.position.y, obj.position.z)
+          mesh.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z)
+          mesh.scale.set(obj.scale.x, obj.scale.y, obj.scale.z)
+          mesh.traverse(child => { if (child instanceof THREE.Mesh) { child.castShadow = true; child.receiveShadow = true } })
+          scene.add(mesh)
+          solidObjects.push(mesh)
+        } catch (e) { console.error('Failed to load:', obj.modelPath) }
+      }
+      isLoadingMap = false
       return
     } catch (error) {
-      console.error('Failed to load default map, using basic environment:', error)
+      console.error('Failed to load default map, creating procedural space environment:', error)
     }
 
-    // Fallback: create simple procedural environment
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.8 }))
-    ground.rotation.x = -Math.PI / 2
-    ground.receiveShadow = true
-    scene.add(ground)
-
-    for (let i = 0; i < 20; i++) {
-      const h = 5 + Math.random() * 20, w = 3 + Math.random() * 5
-      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.55 + Math.random() * 0.1, 0.3, 0.5) }))
-      b.position.set((Math.random() - 0.5) * 200, h / 2, (Math.random() - 0.5) * 200)
-      b.castShadow = true
-      scene.add(b)
-      solidObjects.push(b)
-    }
-
-    for (let i = 0; i < 30; i++) {
-      const g = new THREE.Group()
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 3, 8), new THREE.MeshStandardMaterial({ color: 0x8b4513 }))
-      trunk.position.y = 1.5
-      g.add(trunk)
-      const leaves = new THREE.Mesh(new THREE.ConeGeometry(2, 5, 8), new THREE.MeshStandardMaterial({ color: 0x228b22 }))
-      leaves.position.y = 5
-      g.add(leaves)
-      g.position.set((Math.random() - 0.5) * 250, 0, (Math.random() - 0.5) * 250)
-      scene.add(g)
+    // Fallback: create procedural asteroid field
+    for (let i = 0; i < 50; i++) {
+      const size = 2 + Math.random() * 8;
+      const asteroid = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(size, 0),
+        new THREE.MeshStandardMaterial({
+          color: new THREE.Color().setHSL(0, 0, 0.3 + Math.random() * 0.3),
+          metalness: 0.6,
+          roughness: 0.8
+        })
+      )
+      asteroid.position.set(
+        (Math.random() - 0.5) * 400,
+        (Math.random() - 0.5) * 200,
+        (Math.random() - 0.5) * 400
+      )
+      asteroid.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      asteroid.castShadow = true;
+      asteroid.receiveShadow = true;
+      scene.add(asteroid);
+      solidObjects.push(asteroid);
     }
   }
 
@@ -883,10 +984,12 @@
     if (e.key === 'ArrowUp' && weaponInventory.length > 1) {
       e.preventDefault()
       currentWeaponIndex = (currentWeaponIndex - 1 + weaponInventory.length) % weaponInventory.length
+      flashSelectedWeapon()
     }
     if (e.key === 'ArrowDown' && weaponInventory.length > 1) {
       e.preventDefault()
       currentWeaponIndex = (currentWeaponIndex + 1) % weaponInventory.length
+      flashSelectedWeapon()
     }
     if (e.key === 'Escape' && isPlaying) { isPlaying = false; document.exitPointerLock() }
   }
@@ -957,6 +1060,7 @@
     if (now - lastShot < (rates[weapon.type] || 200) || weapon.ammo === 0) return
     if (weapon.ammo > 0) {
       weapon.ammo--
+      weaponInventory = weaponInventory  // Trigger reactive HUD update
       // Auto-switch to laser cannon when current weapon runs out
       if (weapon.ammo === 0 && weapon.type !== 'laser') {
         currentWeaponIndex = 0  // Switch to laser cannon (always index 0)
@@ -966,11 +1070,10 @@
     lastShot = now
     if (!playerShip) return
 
-    // Calculate aim direction: from ship toward screen center (where crosshair is)
+    // Calculate aim direction: align with camera center ray but originate from the ship to avoid vertical parallax
     const raycaster = new THREE.Raycaster()
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera)
-    const aimTarget = raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(200))
-    const dir = aimTarget.clone().sub(playerShip.position).normalize()
+    const dir = raycaster.ray.direction.clone().normalize()
 
     let mesh: THREE.Mesh | THREE.Group
     let vel: THREE.Vector3, dmg: number, lt: number
@@ -1180,12 +1283,12 @@
       }
 
     } else if (weapon.type === 'scatter') {
-      // Scatter Shot - Fires 7 projectiles in a cone
-      const numPellets = 7
-      const spreadAngle = 0.15 // radians
+      // Scatter Shot - Fires a denser, tighter cone of pellets
+      const numPellets = 9
+      const spreadAngle = 0.12 // radians (tighter for more hits)
       for (let i = 0; i < numPellets; i++) {
         const scatterMat = new THREE.MeshStandardMaterial({ color: 0xff8800, emissive: 0xff6600, emissiveIntensity: 0.9 })
-        mesh = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), scatterMat)
+        mesh = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), scatterMat)
         // Calculate spread direction
         const angleOffset = (i - (numPellets - 1) / 2) * spreadAngle / (numPellets - 1) * 2
         const spreadDir = dir.clone()
@@ -1196,10 +1299,10 @@
         const rightAxis = new THREE.Vector3().crossVectors(dir, upAxis).normalize()
         spreadDir.applyAxisAngle(rightAxis, (Math.random() - 0.5) * spreadAngle * 0.5)
 
-        vel = spreadDir.multiplyScalar(75)
+        vel = spreadDir.multiplyScalar(85)
         mesh.position.copy(playerShip.position).add(dir.clone().multiplyScalar(1.5))
         scene.add(mesh)
-        projectiles.push({ mesh, velocity: vel, damage: gameConfig.playerDamage * 0.5, type: 'scatter', lifetime: 1.5 })
+        projectiles.push({ mesh, velocity: vel, damage: gameConfig.playerDamage * 0.8, type: 'scatter', lifetime: 1.8 })
       }
     }
   }
@@ -1211,6 +1314,61 @@
       scene.add(p)
       particles.push({ mesh: p, velocity: new THREE.Vector3((Math.random() - 0.5) * 10 * size, (Math.random() - 0.5) * 10 * size, (Math.random() - 0.5) * 10 * size), lifetime: 1, maxLifetime: 1 })
     }
+  }
+
+  function createPlasmaBlastVisual(pos: THREE.Vector3) {
+    // Expanding pink sphere (starts a bit larger; scales to match damage radius)
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(1.2, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0xff66ff, transparent: true, opacity: 0.8 })
+    )
+    core.position.copy(pos)
+    scene.add(core)
+    particles.push({ mesh: core, velocity: new THREE.Vector3(), lifetime: 0.4, maxLifetime: 0.4, scaleGrowth: 6 })
+
+    // Shockwave ring
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1.8, 0.16, 12, 24),
+      new THREE.MeshBasicMaterial({ color: 0xff99ff, transparent: true, opacity: 0.7 })
+    )
+    ring.rotation.x = Math.PI / 2
+    ring.position.copy(pos)
+    scene.add(ring)
+    particles.push({ mesh: ring, velocity: new THREE.Vector3(), lifetime: 0.6, maxLifetime: 0.6, scaleGrowth: 3.5 })
+  }
+
+  function handleEnemyDeath(enemy: Enemy) {
+    const idx = enemies.indexOf(enemy)
+    if (idx === -1) return
+    createExplosion(enemy.mesh.position, enemy.type === 'boss' ? 3 : 1)
+    const deathPos = enemy.mesh.position.clone()
+    scene.remove(enemy.mesh); enemies.splice(idx, 1)
+    score += enemy.type === 'boss' ? 500 : enemy.type === 'tank' ? 100 : enemy.type === 'fast' ? 50 : 25
+    kills++
+    if (enemy.type === 'boss') { bossEnemy = null; bossHealth = 0; isBossLevel = false }
+    trySpawnPowerUpOnKill(deathPos)
+  }
+
+  function applyPlasmaBlastDamage(center: THREE.Vector3, baseDamage: number, primary?: Enemy) {
+    const blastRadius = 13
+    const blastDelayMs = 120  // Fire the damage slightly after visuals start expanding
+    createPlasmaBlastVisual(center)
+
+    setTimeout(() => {
+      enemies.slice().forEach(enemy => {
+        if (enemy === primary) return
+        const dist = enemy.mesh.position.distanceTo(center)
+        if (dist <= blastRadius) {
+          const falloff = 1 - dist / blastRadius
+          const damage = enemy.type === 'boss'
+            ? baseDamage * 2 * falloff
+            : enemy.health  // One-shot normal ships in range
+          enemy.health -= damage
+          if (enemy.type === 'boss') bossHealth = enemy.health
+          if (enemy.health <= 0) handleEnemyDeath(enemy)
+        }
+      })
+    }, blastDelayMs)
   }
 
   // Boost trail particles - cyan/blue energy trail behind ship
@@ -1296,8 +1454,9 @@
     // Clamp pitch to prevent flipping
     shipPitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, shipPitch))
 
-    // Calculate ship sway based on mouse movement
-    const swayFromMouse = mouseMovement.x * sensitivity * 10
+    // Calculate ship sway based on mouse movement (smoothed to avoid jitter)
+    const targetSway = mouseMovement.x * sensitivity * 10
+    smoothedSway = THREE.MathUtils.lerp(smoothedSway, targetSway, Math.min(1, delta * 12))
     const idleSway = Math.sin(shipSwayTime * 2) * 0.02
 
     // Reset mouse delta after use
@@ -1318,24 +1477,31 @@
     }
 
     // Q/E barrel roll with lateral movement (strafe in roll direction)
-    let barrelRollVelocity = new THREE.Vector3()
+    let barrelRollStrafe = new THREE.Vector3()
     if (keys['q']) {
-      barrelRollAngle += rollSpeed * delta * 5
+      rollAngularVelocity = rollSpeed * 6  // Continuous roll left while held
       const right = new THREE.Vector3(1, 0, 0).applyQuaternion(playerShip.quaternion)
-      barrelRollVelocity.add(right.clone().multiplyScalar(-25))  // Strafe left while rolling left
+      barrelRollStrafe.add(right.clone().multiplyScalar(-25))  // Strafe left while rolling left
     } else if (keys['e']) {
-      barrelRollAngle -= rollSpeed * delta * 5
+      rollAngularVelocity = -rollSpeed * 6  // Continuous roll right while held
       const right = new THREE.Vector3(1, 0, 0).applyQuaternion(playerShip.quaternion)
-      barrelRollVelocity.add(right.clone().multiplyScalar(25))  // Strafe right while rolling right
+      barrelRollStrafe.add(right.clone().multiplyScalar(25))  // Strafe right while rolling right
     } else {
-      barrelRollAngle *= 0.9
+      rollAngularVelocity = 0  // Stop adding spin when key released
+    }
+    // Integrate roll
+    barrelRollAngle += rollAngularVelocity * delta
+    // Level out smoothly when keys are released without overshooting
+    if (!keys['q'] && !keys['e']) {
+      barrelRollAngle = THREE.MathUtils.lerp(barrelRollAngle, 0, Math.min(1, delta * 4))
+      if (Math.abs(barrelRollAngle) < 0.0005) barrelRollAngle = 0
     }
 
     // Build quaternion from yaw/pitch/roll (YXZ order avoids gimbal lock for flight)
     // This keeps pitch and yaw independent - mouse up always pitches up
     const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), shipYaw)
     const pitchQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), shipPitch)
-    const rollAmount = barrelRollAngle + bankAngle + swayFromMouse + idleSway
+    const rollAmount = barrelRollAngle + bankAngle + smoothedSway + idleSway
     const rollQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), rollAmount)
 
     // Apply in order: yaw first, then pitch, then roll
@@ -1365,14 +1531,13 @@
 
     // Add strafe velocity (A/D)
     target.add(strafeVelocity)
-    // Add barrel roll velocity (Q/E)
-    target.add(barrelRollVelocity)
+    // Add barrel roll lateral strafe (Q/E)
+    target.add(barrelRollStrafe)
 
     velocity.lerp(target, delta * 3)
     velocity.clampLength(0, maxSpeed * (boostActive ? 3 : 1))
     playerShip.position.add(velocity.clone().multiplyScalar(delta))
 
-    if (playerShip.position.y < 2) { playerShip.position.y = 2; velocity.y = Math.max(0, velocity.y) }
     if (playerShip.position.length() > 250) playerShip.position.multiplyScalar(0.99)
 
     // Third-person camera: fixed position behind and above the ship
@@ -1516,26 +1681,13 @@
 
             // Plasma Cannon - AoE damage on impact
             if (p.type === 'plasma') {
-              createExplosion(p.mesh.position, 2.5)
-              // Damage all nearby enemies
-              enemies.forEach(x => {
-                if (x !== e && x.mesh.position.distanceTo(p.mesh.position) < 8) {
-                  x.health -= p.damage * 0.6
-                  if (x.type === 'boss') bossHealth = x.health
-                }
-              })
+              applyPlasmaBlastDamage(p.mesh.position.clone(), p.damage, e)
             }
 
             // Note: Chain lightning is now instant and handled at fire time, not as a projectile
 
             if (e.health <= 0) {
-              createExplosion(e.mesh.position, e.type === 'boss' ? 3 : 1)
-              const deathPos = e.mesh.position.clone()
-              scene.remove(e.mesh); enemies.splice(i, 1)
-              score += e.type === 'boss' ? 500 : e.type === 'tank' ? 100 : e.type === 'fast' ? 50 : 25
-              kills++
-              if (e.type === 'boss') { bossEnemy = null; bossHealth = 0; isBossLevel = false }
-              trySpawnPowerUpOnKill(deathPos)
+              handleEnemyDeath(e)
             }
             scene.remove(p.mesh); return false
           }
@@ -1574,6 +1726,10 @@
       if (p.lifetime <= 0) { scene.remove(p.mesh); return false }
       p.mesh.position.add(p.velocity.clone().multiplyScalar(delta))
       p.velocity.multiplyScalar(0.95)
+      if (p.scaleGrowth) {
+        const growth = 1 + p.scaleGrowth * delta
+        p.mesh.scale.multiplyScalar(growth)
+      }
       ;(p.mesh.material as THREE.MeshBasicMaterial).opacity = p.lifetime / p.maxLifetime
       return true
     })
@@ -1595,7 +1751,7 @@
         powerUpAlert = { message: alertInfo.name, color: alertInfo.color, timestamp: Date.now() }
 
         if (p.type === 'health') health = Math.min(health + 30, 100)
-        else if (p.type === 'ammo') weaponInventory.forEach(w => { if (w.ammo !== -1) w.ammo += 10 })  // Refill all weapons with limited ammo
+        else if (p.type === 'ammo') refillCurrentWeapon(10)
         else if (p.type === 'boost') { boostCharges++ }  // Add boost charge to inventory
         else if (p.type === 'weapon-missile') addWeapon('missile', 10, 'Missiles')
         else if (p.type === 'weapon-plasma') addWeapon('plasma', 5, 'Plasma Cannon')
@@ -1608,6 +1764,15 @@
     })
   }
 
+  function flashSelectedWeapon() {
+    const weapon = weaponInventory[currentWeaponIndex]
+    if (!weapon) return
+    const color = weaponFlashColors[weapon.type] ?? '#ffffaa'
+    const isOut = weapon.ammo === 0
+    const message = isOut ? `${weapon.name.toUpperCase()} OUT OF AMMO` : `${weapon.name.toUpperCase()} READY`
+    powerUpAlert = { message, color: isOut ? '#ff4444' : color, timestamp: Date.now() }
+  }
+
   // Weapon inventory limits
   const weaponMaxAmmo: Record<Weapon['type'], number> = {
     laser: -1,      // Unlimited
@@ -1616,6 +1781,19 @@
     plasma: 5,
     drone: 5,
     scatter: 8
+  }
+
+  function refillCurrentWeapon(amount: number) {
+    const weapon = weaponInventory[currentWeaponIndex]
+    if (!weapon) return
+    const maxAmmo = weaponMaxAmmo[weapon.type]
+    if (maxAmmo === undefined || maxAmmo === -1) {
+      // Unlimited or unknown weapons don't need refills
+      weaponInventory = weaponInventory
+      return
+    }
+    const updatedAmmo = Math.min(maxAmmo, weapon.ammo + amount)
+    weaponInventory = weaponInventory.map((w, i) => i === currentWeaponIndex ? { ...w, ammo: updatedAmmo } : w)
   }
 
   function addWeapon(type: Weapon['type'], ammo: number, name: string) {
@@ -1722,6 +1900,7 @@
     weaponInventory = [{ type: 'laser', ammo: -1, name: 'Laser Cannon' }]; currentWeaponIndex = 0
     boostCharges = 0; boostActive = false; boostEndTime = 0
     continuousMotion = { x: 0, y: 0 }; movementSamples = []; lastMovementTime = 0; isFingerOnTrackpad = false
+    gameConfig.mouseInput = 'auto'; detectedInputType = 'unknown'
     killsSinceLastDrop = 0
     velocity.set(0, 0, 0)
     bankAngle = 0
@@ -1907,37 +2086,6 @@
             </div>
           </div>
 
-          <!-- Mouse Input Type -->
-          <div class="mb-4">
-            <label class="label text-sm font-semibold">Mouse Input</label>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                class="btn btn-sm {gameConfig.mouseInput === 'auto' ? 'btn-primary' : 'btn-outline'}"
-                on:click={() => gameConfig.mouseInput = 'auto'}
-              >
-                Auto
-                {#if gameConfig.mouseInput === 'auto' && detectedInputType !== 'unknown'}
-                  <span class="text-xs opacity-70">({detectedInputType})</span>
-                {/if}
-              </button>
-              <button
-                class="btn btn-sm {gameConfig.mouseInput === 'trackpad' ? 'btn-info' : 'btn-outline'}"
-                on:click={() => gameConfig.mouseInput = 'trackpad'}
-              >
-                Trackpad
-                <div class="text-xs opacity-70">Continuous</div>
-              </button>
-              <button
-                class="btn btn-sm {gameConfig.mouseInput === 'external' ? 'btn-success' : 'btn-outline'}"
-                on:click={() => gameConfig.mouseInput = 'external'}
-              >
-                External
-                <div class="text-xs opacity-70">Direct</div>
-              </button>
-            </div>
-            <div class="text-xs text-gray-500 mt-1">Trackpad mode: view continues moving while finger is on pad</div>
-          </div>
-
           <!-- Power-up Frequency -->
           <div class="mb-4">
             <label class="label text-sm font-semibold">Power-up Drops</label>
@@ -1991,6 +2139,11 @@
         </div>
 
         <h3 class="text-2xl font-bold text-gray-900 mb-4">Select a Map</h3>
+        <div class="mb-3">
+          <a class="text-blue-600 font-semibold underline" href="/experiments/world-builder">
+            --&gt; BUILD A MAP &lt;--
+          </a>
+        </div>
 
         {#if availableMaps.length === 0}
           <div class="bg-yellow-50 p-8 rounded-lg mb-4 border-2 border-yellow-200">
