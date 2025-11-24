@@ -638,24 +638,30 @@
   <title>🐍 Snake-adelic | Dougie's Game Hub</title>
 </svelte:head>
 
-<div class="container mx-auto p-8">
-  <h1 class="text-4xl font-bold mb-6">🐍 Snake-adelic</h1>
+<div class="h-[calc(100vh-2rem)] p-4 flex flex-col">
+  <!-- Header with title and game controls -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-4xl font-bold" style="color: #660460;">🐍 Snake-adelic</h1>
+    <div class="flex gap-2">
+      {#if !gameStarted}
+        <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" onclick={startGame}>
+          {gameOver ? "Play Again" : "Start Game"}
+        </button>
+      {:else}
+        <button class="btn btn-warning" onclick={endGame}>
+          End Game
+        </button>
+      {/if}
+      <button class="btn btn-outline" onclick={resetGame}>
+        Reset
+      </button>
+    </div>
+  </div>
 
-  <div class="flex flex-col lg:flex-row gap-8 lg:h-[calc(100vh-200px)]">
-    <!-- Game Canvas -->
-    <div class="flex-shrink-0">
-      <div class="mb-4 flex gap-8 text-center">
-        <div>
-          <div class="text-sm text-base-content/70">Score</div>
-          <div class="text-3xl font-bold text-primary">{score}</div>
-        </div>
-        <div>
-          <div class="text-sm text-base-content/70">High Score</div>
-          <div class="text-3xl font-bold text-secondary">{highScore}</div>
-        </div>
-      </div>
-
-      <div class="card bg-base-100 shadow-xl relative">
+  <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+    <!-- Game Canvas - scales to fill available space -->
+    <div class="flex-1 flex items-center justify-center min-w-0">
+      <div class="card bg-white shadow-xl relative">
         <div class="card-body p-4">
           <div
             class="game-board"
@@ -724,11 +730,28 @@
       </div>
     </div>
 
-    <!-- Settings Panel -->
-    <div class="flex-1 flex flex-col gap-4">
-      <div class="card bg-base-200 shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
+    <!-- Settings Panel - fixed 1/4 width -->
+    <div class="w-full lg:w-1/4 flex flex-col gap-4 lg:min-w-[280px]">
+      <!-- Stats Container -->
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <div class="stats stats-vertical lg:stats-horizontal shadow w-full overflow-visible flex-wrap">
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Score</div>
+              <div class="stat-value text-lg lg:text-xl text-primary">{score}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">High Score</div>
+              <div class="stat-value text-lg lg:text-xl text-secondary">{highScore}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Container -->
+      <div class="card bg-white shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
         <div class="card-body">
-          <h2 class="card-title">Settings</h2>
+          <h2 class="card-title" style="color: #660460;">Settings</h2>
 
           <div class="space-y-4">
             <!-- Speed Setting -->
@@ -812,7 +835,7 @@
                   type="checkbox"
                   class="checkbox"
                   checked={wallMode === "wraparound"}
-                  onchange={(e) => (wallMode = e.currentTarget.checked ? "wraparound" : "solid")}
+                  onchange={(e: Event) => (wallMode = (e.currentTarget as HTMLInputElement).checked ? "wraparound" : "solid")}
                   disabled={gameStarted}
                 />
               </label>
@@ -878,7 +901,8 @@
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
-                      bind:checked={enabledPowerUps.invincible}
+                      checked={enabledPowerUps.invincible}
+                      onchange={(e: Event) => enabledPowerUps.invincible = (e.currentTarget as HTMLInputElement).checked}
                       disabled={gameStarted}
                     />
                     <div class="flex flex-col">
@@ -890,7 +914,8 @@
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
-                      bind:checked={enabledPowerUps.diet}
+                      checked={enabledPowerUps.diet}
+                      onchange={(e: Event) => enabledPowerUps.diet = (e.currentTarget as HTMLInputElement).checked}
                       disabled={gameStarted}
                     />
                     <div class="flex flex-col">
@@ -902,7 +927,8 @@
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
-                      bind:checked={enabledPowerUps.binge}
+                      checked={enabledPowerUps.binge}
+                      onchange={(e: Event) => enabledPowerUps.binge = (e.currentTarget as HTMLInputElement).checked}
                       disabled={gameStarted}
                     />
                     <div class="flex flex-col">
@@ -914,7 +940,8 @@
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
-                      bind:checked={enabledPowerUps.turtle}
+                      checked={enabledPowerUps.turtle}
+                      onchange={(e: Event) => enabledPowerUps.turtle = (e.currentTarget as HTMLInputElement).checked}
                       disabled={gameStarted}
                     />
                     <div class="flex flex-col">
@@ -936,7 +963,8 @@
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
-                      bind:checked={enabledObstacles.ruler}
+                      checked={enabledObstacles.ruler}
+                      onchange={(e: Event) => enabledObstacles.ruler = (e.currentTarget as HTMLInputElement).checked}
                       disabled={gameStarted}
                     />
                     <div class="flex flex-col">
@@ -948,7 +976,8 @@
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
-                      bind:checked={enabledObstacles.lightning}
+                      checked={enabledObstacles.lightning}
+                      onchange={(e: Event) => enabledObstacles.lightning = (e.currentTarget as HTMLInputElement).checked}
                       disabled={gameStarted}
                     />
                     <div class="flex flex-col">
@@ -960,7 +989,8 @@
                     <input
                       type="checkbox"
                       class="checkbox checkbox-xs"
-                      bind:checked={enabledObstacles.cow}
+                      checked={enabledObstacles.cow}
+                      onchange={(e: Event) => enabledObstacles.cow = (e.currentTarget as HTMLInputElement).checked}
                       disabled={gameStarted}
                     />
                     <div class="flex flex-col">
@@ -988,25 +1018,6 @@
         </div>
       </div>
 
-      <!-- Game Controls - Always Visible -->
-      <div class="card bg-base-200 shadow-xl">
-        <div class="card-body p-4">
-          <div class="flex gap-2">
-            {#if !gameStarted}
-              <button class="btn btn-primary flex-1" onclick={startGame}>
-                {gameOver ? "Play Again" : "Start Game"}
-              </button>
-            {:else}
-              <button class="btn btn-warning flex-1" onclick={endGame}>
-                End Game
-              </button>
-            {/if}
-            <button class="btn btn-secondary" onclick={resetGame}>
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

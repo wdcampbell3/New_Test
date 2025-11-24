@@ -771,28 +771,50 @@
   <title>🏓 Cosmic Pong | Dougie's Game Hub</title>
 </svelte:head>
 
-<div class="container mx-auto p-8">
-  <h1 class="text-4xl font-bold mb-6">🏓 Cosmic Pong</h1>
+<div class="h-[calc(100vh-2rem)] p-4 flex flex-col">
+  <!-- Header with title and game controls -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-4xl font-bold" style="color: #660460;">🏓 Cosmic Pong</h1>
+    <div class="flex gap-2">
+      {#if !gameRunning || gameOver}
+        <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" onclick={startGame}>
+          {gameOver ? "New Game" : "Start Game"}
+        </button>
+      {:else}
+        <button class="btn btn-warning" onclick={pauseGame}>
+          Pause
+        </button>
+      {/if}
+      <button class="btn btn-outline" onclick={resetGame}>
+        Reset
+      </button>
+    </div>
+  </div>
 
-  <div class="flex flex-col lg:flex-row gap-8 lg:h-[calc(100vh-200px)]">
-    <!-- Game Canvas -->
-    <div class="flex-shrink-0">
-      <canvas
-        bind:this={canvas}
-        width="800"
-        height="600"
-        class="border-4 border-base-300 rounded-lg shadow-xl touch-none cursor-pointer"
-        ontouchmove={handleTouchMove}
-        ontouchstart={handleTouchMove}
-        onclick={handleCanvasClick}
-      ></canvas>
+  <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+    <!-- Game Canvas - scales to fill available space -->
+    <div class="flex-1 flex items-center justify-center min-w-0">
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <canvas
+            bind:this={canvas}
+            width="800"
+            height="600"
+            class="rounded-lg touch-none cursor-pointer max-w-full max-h-full"
+            style="aspect-ratio: 4/3;"
+            ontouchmove={handleTouchMove}
+            ontouchstart={handleTouchMove}
+            onclick={handleCanvasClick}
+          ></canvas>
+        </div>
+      </div>
     </div>
 
-    <!-- Controls Panel -->
-    <div class="flex-1 flex flex-col gap-4">
-      <div class="card bg-base-200 shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
+    <!-- Controls Panel - fixed 1/4 width -->
+    <div class="w-full lg:w-1/4 flex flex-col gap-4 lg:min-w-[280px]">
+      <div class="card bg-white shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
         <div class="card-body">
-          <h2 class="card-title">Settings</h2>
+          <h2 class="card-title" style="color: #660460;">Settings</h2>
 
           <div class="space-y-4">
           <!-- Versus Mode Toggle -->
@@ -986,25 +1008,6 @@
         </div>
       </div>
 
-      <!-- Game Controls - Always Visible -->
-      <div class="card bg-base-200 shadow-xl">
-        <div class="card-body p-4">
-          <div class="flex gap-2">
-            {#if !gameRunning || gameOver}
-              <button class="btn btn-primary flex-1" onclick={startGame}>
-                {gameOver ? "New Game" : "Start Game"}
-              </button>
-            {:else}
-              <button class="btn btn-warning flex-1" onclick={pauseGame}>
-                Pause
-              </button>
-            {/if}
-            <button class="btn btn-secondary" onclick={resetGame}>
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

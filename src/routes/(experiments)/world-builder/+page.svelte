@@ -1942,7 +1942,7 @@
 
 <div class="flex flex-col md:flex-row h-screen overflow-hidden">
   <!-- Toolbar - bottom right -->
-  <div class="absolute bottom-8 right-6 z-20 bg-base-200/90 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-nowrap gap-2 items-center whitespace-nowrap">
+  <div class="absolute bottom-8 right-6 z-20 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg flex flex-nowrap gap-2 items-center whitespace-nowrap">
     <button
       class="btn btn-sm {!selectedModel ? 'btn-accent' : 'btn-ghost'}"
       onclick={clearSelection}
@@ -2046,7 +2046,7 @@
     <div class="flex-1 overflow-y-auto p-4 pt-0" style="pointer-events: auto;">
       {#if activeTab === 'models'}
         <!-- Models Tab -->
-        <h2 class="text-2xl font-bold mb-4">Object Palette</h2>
+        <h2 class="text-2xl font-bold mb-4" style="color: #660460;">Object Palette</h2>
 
         <!-- Search Bar -->
         <div class="form-control mb-2">
@@ -2113,7 +2113,7 @@
 
       {:else if activeTab === 'maps'}
         <!-- Maps Tab -->
-        <h2 class="text-2xl font-bold mb-4">Map Manager</h2>
+        <h2 class="text-2xl font-bold mb-4" style="color: #660460;">Map Manager</h2>
 
         <!-- Current Map Info -->
         <div class="bg-base-300 p-3 rounded-lg mb-4">
@@ -2212,7 +2212,7 @@
         </div>
 
         <!-- Saved Maps List -->
-        <h3 class="text-lg font-bold mb-2">Saved Maps ({savedMaps.length})</h3>
+        <h3 class="text-lg font-bold mb-2" style="color: #660460;">Saved Maps ({savedMaps.length})</h3>
 
         {#if savedMaps.length === 0}
           <div class="text-sm text-gray-500 text-center py-8">
@@ -2266,7 +2266,7 @@
 
       {:else if activeTab === 'options'}
         <!-- Options Tab -->
-        <h2 class="text-2xl font-bold mb-4">Environment</h2>
+        <h2 class="text-2xl font-bold mb-4" style="color: #660460;">Environment</h2>
 
         <!-- Time of Day -->
         <div class="form-control mb-4">
@@ -2336,7 +2336,7 @@
 
         <!-- Stats -->
         <div class="divider"></div>
-        <h3 class="text-lg font-bold mb-2">Scene Stats</h3>
+        <h3 class="text-lg font-bold mb-2" style="color: #660460;">Scene Stats</h3>
         <div class="stats stats-vertical shadow w-full">
           <div class="stat p-3">
             <div class="stat-title text-xs">Objects</div>
@@ -2366,7 +2366,7 @@
       {#if placedObjects.length === 0}
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div class="bg-black/70 p-8 rounded-lg text-white text-center max-w-md">
-            <h3 class="text-2xl font-bold mb-4">🏗️ Start Building!</h3>
+            <h3 class="text-2xl font-bold mb-4" style="color: #660460;">🏗️ Start Building!</h3>
             <p class="text-sm text-left">
               <strong>Placing Objects:</strong><br/>
               1. Select an object from the sidebar<br/>
@@ -2394,8 +2394,8 @@
   <!-- POV Mode Pause Overlay -->
   {#if isPOVPaused}
     <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div class="bg-base-200 p-8 rounded-lg shadow-xl flex flex-col gap-4 max-w-md">
-        <h2 class="text-3xl font-bold text-center">POV Mode Paused</h2>
+      <div class="bg-white p-8 rounded-lg shadow-xl flex flex-col gap-4 max-w-md">
+        <h2 class="text-3xl font-bold text-center" style="color: #660460;">POV Mode Paused</h2>
         <div class="flex flex-col gap-3">
           <button
             class="btn btn-primary btn-lg"

@@ -54,7 +54,7 @@
       aria-label="close sidebar"
       class="drawer-overlay"
     ></label>
-    <aside class="min-h-screen w-64 bg-base-200 text-base-content">
+    <aside class="min-h-screen w-64 bg-base-200 text-base-content border-r-2" style="border-color: rgba(102, 4, 96, 0.33);">
       <div class="p-4">
         <h2 class="text-2xl font-bold mb-6">🧪 Experiments</h2>
 
@@ -67,13 +67,13 @@
           ← Back to Home
         </a>
 
-        <!-- 2D Games Section -->
+        <!-- 3D Games Section -->
         <div class="mb-6">
           <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">
-            2D Games
+            3D Games
           </h3>
           <ul class="menu gap-2">
-            {#each experiments2D as experiment}
+            {#each experiments3D as experiment}
               <li>
                 <a
                   href={experiment.path}
@@ -88,13 +88,13 @@
           </ul>
         </div>
 
-        <!-- 3D Games Section -->
+        <!-- 2D Games Section -->
         <div>
           <h3 class="text-sm font-semibold text-base-content/60 mb-2 px-4">
-            3D Games
+            2D Games
           </h3>
           <ul class="menu gap-2">
-            {#each experiments3D as experiment}
+            {#each experiments2D as experiment}
               <li>
                 <a
                   href={experiment.path}

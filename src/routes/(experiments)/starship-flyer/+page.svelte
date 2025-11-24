@@ -2034,21 +2034,27 @@
 
 <svelte:head><title>Starship Flyer | Dougie's Game Hub</title></svelte:head>
 
-<div bind:this={container} class="relative w-full h-screen overflow-hidden">
+<div class="flex h-screen overflow-hidden">
+<div bind:this={container} class="relative flex-1 h-screen overflow-hidden">
   {#if showMapSelector}
-    <!-- Background with thumbnail and 50% white overlay (matching Blocky Shooter) -->
-    <div class="absolute inset-0 z-30">
-      {#if selectedMap?.thumbnail}
-        <div class="absolute inset-0" style="background-image: url({selectedMap.thumbnail}); background-size: cover; background-position: center;"></div>
-      {/if}
-      <div class="absolute inset-0 bg-white/50"></div>
-    </div>
-    <div class="absolute inset-0 flex items-center justify-center z-30 overflow-y-auto p-4">
-      <div class="text-center max-w-5xl w-full">
-        <h2 class="text-4xl font-bold text-gray-900 mb-6">Game Setup</h2>
+    <!-- Background -->
+    <div class="absolute inset-0 z-30 bg-base-200"></div>
+    <div class="absolute inset-0 z-30 p-4 flex flex-col">
+      <!-- Header with title and start button -->
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-4xl font-bold" style="color: #660460;">🚀 Starship Flyer</h1>
+        <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" on:click={startGame}>
+          Launch Mission
+        </button>
+      </div>
 
-        <!-- Ship Selection -->
-        <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
+      <!-- Main content area with center setup and right sidebar -->
+      <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+        <!-- Center content - Game Setup -->
+        <div class="flex-1 flex items-center justify-center overflow-y-auto">
+          <div class="max-w-4xl w-full pb-8">
+            <!-- Ship Selection -->
+          <div class="bg-white rounded-lg p-6 mb-6 border-2 border-gray-200 shadow-lg">
           <h3 class="text-2xl font-bold text-gray-900 mb-4">Select Your Ship</h3>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             {#each spaceshipOptions as ship}
@@ -2068,10 +2074,10 @@
         </div>
 
         <!-- Select a Map -->
-        <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
+        <div class="bg-white rounded-lg p-6 mb-6 border-2 border-gray-200 shadow-lg">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-2xl font-bold text-gray-900">Select a Map</h3>
-            <a class="text-blue-600 font-semibold underline text-sm" href="/experiments/world-builder">
+            <a class="text-blue-600 font-semibold underline text-sm" href="/world-builder">
               Build a Map →
             </a>
           </div>
@@ -2170,7 +2176,7 @@
         </div>
 
         <!-- Difficulty Settings (matching Blocky Shooter) -->
-        <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
+        <div class="bg-white rounded-lg p-6 mb-6 border-2 border-gray-200 shadow-lg">
           <h3 class="text-2xl font-bold text-gray-900 mb-4">Difficulty & Settings</h3>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -2271,14 +2277,64 @@
             </div>
           </div>
         </div>
+          </div>
+        </div>
 
-        <button class="btn btn-primary btn-lg text-white" on:click={startGame}>
-          Launch Mission
-        </button>
+        <!-- Right Sidebar - Controls & Info -->
+        <div class="w-full lg:w-1/4 flex flex-col gap-4 lg:min-w-[280px] overflow-y-auto">
+          <!-- Controls Card -->
+          <div class="card bg-white shadow-xl">
+            <div class="card-body p-4">
+              <h3 class="font-semibold mb-2 text-sm">Controls:</h3>
+              <ul class="space-y-1 text-xs">
+                <li><kbd class="kbd kbd-sm">W/S</kbd> - Forward/Back</li>
+                <li><kbd class="kbd kbd-sm">A/D</kbd> - Strafe Left/Right</li>
+                <li><kbd class="kbd kbd-sm">Mouse</kbd> - Aim</li>
+                <li><kbd class="kbd kbd-sm">Shift/Click</kbd> - Fire</li>
+                <li><kbd class="kbd kbd-sm">Space</kbd> - Boost</li>
+                <li><kbd class="kbd kbd-sm">Q/E</kbd> - Barrel Roll</li>
+                <li><kbd class="kbd kbd-sm">↑/↓ or 1-5</kbd> - Switch Weapons</li>
+                <li><kbd class="kbd kbd-sm">ESC</kbd> - Pause</li>
+              </ul>
+            </div>
+          </div>
 
-        <p class="text-gray-900 mt-6 text-sm">
-          Controls: W/S forward/back, A/D strafe left/right, Mouse to aim, Shift to fire, Space for BOOST, Q/E for barrel rolls, ↑/↓ or 1-5 switch weapons, ESC to pause
-        </p>
+          <!-- Power-Ups Card -->
+          <div class="card bg-white shadow-xl">
+            <div class="card-body p-4">
+              <h3 class="font-semibold mb-2 text-sm">Power-Ups:</h3>
+              <ul class="space-y-1 text-xs">
+                <li><span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-1"></span> Health - Restore hull</li>
+                <li><span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-1"></span> Ammo - +20 rounds</li>
+                <li><span class="inline-block w-3 h-3 rounded-full bg-cyan-500 mr-1"></span> Shield - Temporary protection</li>
+                <li><span class="inline-block w-3 h-3 rounded-full bg-yellow-500 mr-1"></span> Missiles - +10 rockets</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Enemies Card -->
+          <div class="card bg-white shadow-xl">
+            <div class="card-body p-4">
+              <h3 class="font-semibold mb-2 text-sm">Enemies:</h3>
+              <ul class="space-y-1 text-xs">
+                <li><span class="text-red-500">Red</span> - Basic fighters</li>
+                <li><span class="text-cyan-500">Cyan</span> - Fast interceptors</li>
+                <li><span class="text-purple-500">Purple</span> - Boss ships</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Tips Card -->
+          <div class="card bg-white shadow-xl">
+            <div class="card-body p-4">
+              <h3 class="font-semibold mb-2 text-sm">Tips:</h3>
+              <p class="text-xs">
+                Use barrel rolls to dodge enemy fire! Collect power-ups to stay alive.
+                Every 5 levels features a boss battle. Watch your hull integrity!
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   {/if}
@@ -2390,6 +2446,8 @@
       </div>
     </div>
   {/if}
+</div>
+
 </div>
 
 <style>

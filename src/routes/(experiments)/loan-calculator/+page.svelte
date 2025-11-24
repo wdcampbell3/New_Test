@@ -28,13 +28,13 @@
 </svelte:head>
 
 <div class="container mx-auto max-w-4xl p-6">
-  <h1 class="mb-8 text-center text-4xl font-bold">Loan Calculator</h1>
+  <h1 class="mb-8 text-center text-4xl font-bold" style="color: #660460;">Loan Calculator</h1>
 
   <div class="grid gap-8 lg:grid-cols-2">
     <!-- Input Section -->
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
-        <h2 class="card-title mb-4">Loan Details</h2>
+        <h2 class="card-title mb-4" style="color: #660460;">Loan Details</h2>
 
         <div class="form-control">
           <label class="label" for="loanAmount">
@@ -113,7 +113,7 @@
     <!-- Results Section -->
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
-        <h2 class="card-title mb-4">Payment Summary</h2>
+        <h2 class="card-title mb-4" style="color: #660460;">Payment Summary</h2>
 
         <div class="stat">
           <div class="stat-title">Monthly Payment</div>

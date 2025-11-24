@@ -1929,75 +1929,106 @@
   <title>👾 Space Invaders | Dougie's Game Hub</title>
 </svelte:head>
 
-<div class="container mx-auto p-8">
-  <h1 class="text-4xl font-bold mb-6">👾 Space Invaders</h1>
+<div class="h-[calc(100vh-2rem)] p-4 flex flex-col">
+  <!-- Header with title and game controls -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-4xl font-bold" style="color: #660460;">👾 Space Invaders</h1>
+    <div class="flex gap-2">
+      {#if !gameStarted}
+        <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" onclick={initGame}>
+          Start Game
+        </button>
+      {:else if !gameRunning && !showLevelTransition && !gameOver}
+        <button class="btn btn-success" onclick={() => (gameRunning = true)}>
+          Resume
+        </button>
+      {:else if gameOver}
+        <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" onclick={initGame}>
+          Play Again
+        </button>
+      {:else if gameRunning && !gameOver}
+        <button class="btn btn-warning" onclick={() => (gameRunning = false)} disabled={showLevelTransition}>
+          Pause
+        </button>
+      {/if}
+      <button class="btn btn-outline" onclick={resetGame}>
+        Reset
+      </button>
+    </div>
+  </div>
 
-  <div class="flex flex-col lg:flex-row gap-8 lg:h-[calc(100vh-200px)]">
-    <!-- Game Canvas -->
-    <div class="flex-shrink-0">
-      <canvas
-        bind:this={canvas}
-        width={CANVAS_WIDTH}
-        height={CANVAS_HEIGHT}
-        class="border-4 border-base-300 rounded-lg shadow-xl"
-      ></canvas>
+  <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+    <!-- Game Canvas - scales to fill available space -->
+    <div class="flex-1 flex items-center justify-center min-w-0">
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <canvas
+            bind:this={canvas}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            class="rounded-lg max-w-full max-h-full"
+          ></canvas>
+        </div>
+      </div>
     </div>
 
-    <!-- Settings Panel -->
-    <div class="flex-1 flex flex-col gap-4">
-      <div class="card bg-base-200 shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
+    <!-- Settings Panel - fixed 1/4 width -->
+    <div class="w-full lg:w-1/4 flex flex-col gap-4 lg:min-w-[280px]">
+      <!-- Stats Container -->
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <div class="stats stats-vertical lg:stats-horizontal shadow w-full overflow-visible flex-wrap">
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Score</div>
+              <div class="stat-value text-lg lg:text-xl text-primary">{score}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">High Score</div>
+              <div class="stat-value text-lg lg:text-xl text-secondary">{highScore}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Lives</div>
+              <div class="stat-value text-lg lg:text-xl text-error">{lives}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Level</div>
+              <div class="stat-value text-lg lg:text-xl text-accent">{level}</div>
+            </div>
+          </div>
+
+          {#if combo > 2}
+            <div class="alert alert-warning mt-2">
+              <span class="font-bold">🔥 Combo: {combo}x</span>
+            </div>
+          {/if}
+
+          {#if activePowerUp}
+            <div class="alert alert-info mt-2">
+              <span class="font-bold">
+                {activePowerUp === "rapidfire" ? "⚡ Rapid Fire" : ""}
+                {activePowerUp === "shield" ? "🛡️ Deflection Shield" : ""}
+                {activePowerUp === "spreadshot" ? "💥 Spread Shot" : ""}
+                {activePowerUp === "laser" ? "🔫 Laser" : ""}
+                {activePowerUp === "star" ? "⭐ Invincible" : ""}
+                - {powerUpTimeLeft.toFixed(1)}s
+              </span>
+            </div>
+          {/if}
+
+          {#if missileAvailable > 0}
+            <div class="alert alert-error mt-2">
+              <span class="font-bold text-lg">🚀 Missiles: {missileAvailable} (Press ↑)</span>
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Settings Container -->
+      <div class="card bg-white shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
         <div class="card-body">
-          <h2 class="card-title">Settings</h2>
+          <h2 class="card-title" style="color: #660460;">Settings</h2>
 
           <div class="space-y-4">
-            <!-- Stats -->
-            <div class="stats shadow w-full">
-              <div class="stat py-3">
-                <div class="stat-title text-xs">Score</div>
-                <div class="stat-value text-2xl text-primary">{score}</div>
-              </div>
-              <div class="stat py-3">
-                <div class="stat-title text-xs">High Score</div>
-                <div class="stat-value text-2xl text-secondary">{highScore}</div>
-              </div>
-            </div>
-
-            <div class="stats shadow w-full">
-              <div class="stat py-3">
-                <div class="stat-title text-xs">Lives</div>
-                <div class="stat-value text-2xl text-error">{lives}</div>
-              </div>
-              <div class="stat py-3">
-                <div class="stat-title text-xs">Level</div>
-                <div class="stat-value text-2xl text-accent">{level}</div>
-              </div>
-            </div>
-
-            {#if combo > 2}
-              <div class="alert alert-warning">
-                <span class="font-bold">🔥 Combo: {combo}x</span>
-              </div>
-            {/if}
-
-            {#if activePowerUp}
-              <div class="alert alert-info">
-                <span class="font-bold">
-                  {activePowerUp === "rapidfire" ? "⚡ Rapid Fire" : ""}
-                  {activePowerUp === "shield" ? "🛡️ Deflection Shield" : ""}
-                  {activePowerUp === "spreadshot" ? "💥 Spread Shot" : ""}
-                  {activePowerUp === "laser" ? "🔫 Laser" : ""}
-                  {activePowerUp === "star" ? "⭐ Invincible" : ""}
-                  - {powerUpTimeLeft.toFixed(1)}s
-                </span>
-              </div>
-            {/if}
-
-            {#if missileAvailable > 0}
-              <div class="alert alert-error">
-                <span class="font-bold text-lg">🚀 Missiles: {missileAvailable} (Press ↑)</span>
-              </div>
-            {/if}
-
             <!-- Difficulty Setting -->
             <div class="form-control">
               <div class="label">
@@ -2152,37 +2183,6 @@
         </div>
       </div>
 
-      <!-- Game Controls -->
-      <div class="card bg-base-200 shadow-xl">
-        <div class="card-body p-4">
-          <div class="flex gap-2">
-            {#if !gameStarted}
-              <button class="btn btn-primary flex-1" onclick={initGame}>
-                Start Game
-              </button>
-            {:else if !gameRunning && !showLevelTransition && !gameOver}
-              <button class="btn btn-success flex-1" onclick={() => (gameRunning = true)}>
-                Resume
-              </button>
-            {:else if gameOver}
-              <button class="btn btn-primary flex-1" onclick={initGame}>
-                Play Again
-              </button>
-            {:else if gameRunning && !gameOver}
-              <button
-                class="btn btn-warning flex-1"
-                onclick={() => (gameRunning = false)}
-                disabled={showLevelTransition}
-              >
-                Pause
-              </button>
-            {/if}
-            <button class="btn btn-secondary" onclick={resetGame}>
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

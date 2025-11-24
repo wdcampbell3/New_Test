@@ -3030,19 +3030,24 @@
           </div>
         </div>
       {:else if showMapSelector}
-        <!-- Background with thumbnail and 50% white overlay -->
-        <div class="absolute inset-0 z-30">
-          {#if selectedMap?.thumbnail}
-            <div class="absolute inset-0" style="background-image: url({selectedMap.thumbnail}); background-size: cover; background-position: center;"></div>
-          {/if}
-          <div class="absolute inset-0 bg-white/50"></div>
-        </div>
-        <div class="absolute inset-0 flex items-center justify-center z-30 overflow-y-auto p-4">
-          <div class="text-center max-w-5xl w-full">
-            <h2 class="text-4xl font-bold text-gray-900 mb-6">Game Setup</h2>
+        <!-- Background -->
+        <div class="absolute inset-0 z-30 bg-base-200"></div>
+        <div class="absolute inset-0 z-30 p-4 flex flex-col">
+          <!-- Header with title and start button -->
+          <div class="flex justify-between items-center mb-4">
+            <h1 class="text-4xl font-bold" style="color: #660460;">🎯 Blocky Shooter</h1>
+            <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" on:click={() => { if (selectedMap) selectMapAndStart(selectedMap); else startWithDefaultMap() }}>
+              Start Game
+            </button>
+          </div>
 
-            <!-- Difficulty Settings -->
-            <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
+          <!-- Main content area with center setup and right sidebar -->
+          <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+            <!-- Center content - Game Setup -->
+            <div class="flex-1 flex items-center justify-center overflow-y-auto">
+              <div class="max-w-4xl w-full pb-8">
+              <!-- Difficulty Settings -->
+              <div class="bg-white rounded-lg p-6 mb-6 border-2 border-gray-200 shadow-lg">
               <h3 class="text-2xl font-bold text-gray-900 mb-4">Difficulty & Settings</h3>
 
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -3090,10 +3095,10 @@
             </div>
 
             <!-- Select a Map -->
-            <div class="bg-yellow-50 rounded-lg p-6 mb-6 border-2 border-yellow-200">
+            <div class="bg-white rounded-lg p-6 mb-6 border-2 border-gray-200 shadow-lg">
               <div class="flex justify-between items-center mb-4">
                 <h3 class="text-2xl font-bold text-gray-900">Select a Map</h3>
-                <a class="text-blue-600 font-semibold underline text-sm" href="/experiments/world-builder">
+                <a class="text-blue-600 font-semibold underline text-sm" href="/world-builder">
                   Build a Map →
                 </a>
               </div>
@@ -3190,14 +3195,65 @@
                 </button>
               </div>
             </div>
+              </div>
+            </div>
 
-            <button class="btn btn-primary btn-lg text-white" on:click={() => { if (selectedMap) selectMapAndStart(selectedMap); else startWithDefaultMap() }}>
-              Start Game
-            </button>
+            <!-- Right Sidebar - Controls & Info -->
+            <div class="w-full lg:w-1/4 flex flex-col gap-4 lg:min-w-[280px] overflow-y-auto">
+              <!-- Controls Card -->
+              <div class="card bg-white shadow-xl">
+                <div class="card-body p-4">
+                  <h3 class="font-semibold mb-2 text-sm">Controls:</h3>
+                  <ul class="space-y-1 text-xs">
+                    <li><kbd class="kbd kbd-sm">W/A/S/D</kbd> - Move</li>
+                    <li><kbd class="kbd kbd-sm">Mouse</kbd> - Look around</li>
+                    <li><kbd class="kbd kbd-sm">Click</kbd> - Shoot</li>
+                    <li><kbd class="kbd kbd-sm">←/→ or ↑/↓</kbd> - Switch weapons</li>
+                    <li><kbd class="kbd kbd-sm">1-5</kbd> - Select weapon</li>
+                    <li><kbd class="kbd kbd-sm">Space</kbd> - Jump</li>
+                    <li><kbd class="kbd kbd-sm">ESC</kbd> - Pause</li>
+                  </ul>
+                </div>
+              </div>
 
-            <p class="text-gray-900 mt-6 text-sm">
-              Controls: WASD to move, Mouse to look, Click to shoot, Space to jump, ESC to pause
-            </p>
+              <!-- Power-Ups Card -->
+              <div class="card bg-white shadow-xl">
+                <div class="card-body p-4">
+                  <h3 class="font-semibold mb-2 text-sm">Power-Ups (auto-apply):</h3>
+                  <ul class="space-y-1 text-xs">
+                    <li><span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-1"></span> Health - +30 HP</li>
+                    <li><span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-1"></span> Ammo - +20 rounds to weapon</li>
+                    <li><span class="inline-block w-3 h-3 rounded-full bg-cyan-500 mr-1"></span> Jetpack - Fly for 60s</li>
+                    <li><span class="inline-block w-3 h-3 rounded-full bg-yellow-500 mr-1"></span> Missiles - +10 heat-seeking rockets</li>
+                    <li><span class="inline-block w-3 h-3 rounded-full bg-orange-500 mr-1"></span> Grenades - +5 area damage</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Enemies Card -->
+              <div class="card bg-white shadow-xl">
+                <div class="card-body p-4">
+                  <h3 class="font-semibold mb-2 text-sm">Enemies:</h3>
+                  <ul class="space-y-1 text-xs">
+                    <li><span class="text-red-500">Red</span> - Basic (50 HP)</li>
+                    <li><span class="text-cyan-500">Cyan</span> - Fast (30 HP, circles you)</li>
+                    <li><span class="text-orange-600">Brown</span> - Tank (100 HP, heavy damage)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Tips Card -->
+              <div class="card bg-white shadow-xl">
+                <div class="card-body p-4">
+                  <h3 class="font-semibold mb-2 text-sm">Tips:</h3>
+                  <p class="text-xs">
+                    Collect power-ups to gain advantages! Level up every 500 points.
+                    Different weapons have different ammo. Navigate through obstacles
+                    to find the best vantage points.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       {:else if !isPlaying && hasStartedGame}
@@ -3405,82 +3461,4 @@
       </div>
     </div>
 
-  <!-- Info Panel (hidden during active gameplay, shown when paused or in menu) -->
-  {#if !isPlaying || isGameOver}
-  <div class="w-full md:w-80 h-auto md:h-screen p-4 bg-base-200 overflow-y-auto">
-    <h1 class="text-2xl md:text-4xl font-bold mb-4 md:mb-6">🎯 Blocky Shooter</h1>
-
-    {#if selectedMap}
-      <div class="alert alert-info mb-4 text-xs md:text-sm">
-        <div>
-          <div class="font-bold">Playing: {selectedMap.name}</div>
-          <div class="text-xs opacity-70">
-            {selectedMap.environment.timeOfDay} • {selectedMap.environment.weather}
-          </div>
-        </div>
-      </div>
-    {/if}
-
-    {#if hasStartedGame}
-    <div class="stats stats-horizontal md:stats-vertical w-full mb-4 md:mb-6">
-      <div class="stat bg-base-100">
-        <div class="stat-title">Score</div>
-        <div class="stat-value text-primary text-2xl md:text-4xl">{score}</div>
-      </div>
-      <div class="stat bg-base-100">
-        <div class="stat-title">Health</div>
-        <div class="stat-value text-accent text-2xl md:text-4xl">{health}</div>
-      </div>
-      <div class="stat bg-base-100">
-        <div class="stat-title">Level</div>
-        <div class="stat-value text-secondary text-2xl md:text-4xl">{level}</div>
-      </div>
-    </div>
-    {/if}
-
-    <div class="space-y-4 md:space-y-6">
-      <div>
-        <h3 class="font-semibold mb-2 text-sm md:text-base">Controls:</h3>
-        <ul class="space-y-1 text-xs md:text-sm">
-          <li><kbd class="kbd kbd-sm">W/A/S/D</kbd> - Move</li>
-          <li><kbd class="kbd kbd-sm">Mouse</kbd> - Look around</li>
-          <li><kbd class="kbd kbd-sm">Click</kbd> - Shoot</li>
-          <li><kbd class="kbd kbd-sm">←/→ or ↑/↓</kbd> - Switch weapons</li>
-          <li><kbd class="kbd kbd-sm">1-5</kbd> - Select weapon</li>
-          <li><kbd class="kbd kbd-sm">Space</kbd> - Jump</li>
-          <li><kbd class="kbd kbd-sm">ESC</kbd> - Pause</li>
-        </ul>
-      </div>
-
-      <div>
-        <h3 class="font-semibold mb-2 text-sm md:text-base">Power-Ups (auto-apply):</h3>
-        <ul class="space-y-1 text-xs md:text-sm">
-          <li><span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-1"></span> Health - +30 HP</li>
-          <li><span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-1"></span> Ammo - +20 rounds to weapon</li>
-          <li><span class="inline-block w-3 h-3 rounded-full bg-cyan-500 mr-1"></span> Jetpack - Fly for 60s</li>
-          <li><span class="inline-block w-3 h-3 rounded-full bg-yellow-500 mr-1"></span> Missiles - +10 heat-seeking rockets</li>
-          <li><span class="inline-block w-3 h-3 rounded-full bg-orange-500 mr-1"></span> Grenades - +5 area damage</li>
-        </ul>
-      </div>
-
-      <div>
-        <h3 class="font-semibold mb-2 text-sm md:text-base">Enemies:</h3>
-        <ul class="space-y-1 text-xs md:text-sm">
-          <li><span class="text-red-500">Red</span> - Basic (50 HP)</li>
-          <li><span class="text-cyan-500">Cyan</span> - Fast (30 HP, circles you)</li>
-          <li><span class="text-orange-600">Brown</span> - Tank (100 HP, heavy damage)</li>
-        </ul>
-      </div>
-
-      <div>
-        <h3 class="font-semibold mb-2 text-sm md:text-base">Tips:</h3>
-        <p class="text-xs md:text-sm">
-          Collect power-ups to gain advantages! Level up every 500 points.
-          Different weapons have different ammo. Navigate through obstacles
-          to find the best vantage points.
-        </p>
-      </div>
-    </div>
   </div>
-  {/if}
-</div>

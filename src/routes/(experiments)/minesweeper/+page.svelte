@@ -900,22 +900,31 @@
   <title>💣 Mine Buster | Dougie's Game Hub</title>
 </svelte:head>
 
-<div class="container mx-auto p-8">
-  <h1 class="text-4xl font-bold mb-6">💣 Mine Buster</h1>
+<div class="h-[calc(100vh-2rem)] p-4 flex flex-col">
+  <!-- Header with title and game controls -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-4xl font-bold" style="color: #660460;">💣 Mine Buster</h1>
+    <div class="flex gap-2">
+      <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" onclick={initGame}>
+        New Game
+      </button>
+    </div>
+  </div>
 
-  <div class="flex flex-col lg:flex-row gap-8 lg:h-[calc(100vh-200px)]">
-    <!-- Game Board -->
-    <div class="flex-shrink-0">
-      <div
-        class="inline-block border-4 border-base-300 rounded-lg shadow-xl p-2 bg-base-200 relative"
-        style="width: {BOARD_SIZE}px; height: {BOARD_SIZE}px;"
-      >
-        <div class="grid gap-0.5" style="grid-template-columns: repeat({DIFFICULTIES[difficulty].cols}, minmax(0, 1fr)); height: 100%;">
+  <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+    <!-- Game Board - scales to fill available space -->
+    <div class="flex-1 flex items-center justify-center min-w-0">
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <div
+            class="rounded-lg p-2 relative aspect-square"
+            style="width: min({BOARD_SIZE}px, 70vh);"
+          >
+            <div class="grid gap-0.5" style="grid-template-columns: repeat({DIFFICULTIES[difficulty].cols}, minmax(0, 1fr)); height: 100%;">
           {#each grid as row, rowIndex}
             {#each row as cell, colIndex}
               <button
-                class="border border-base-content/20 rounded font-bold flex items-center justify-center transition-colors relative {getCellClass(cell, rowIndex, colIndex)} {cell.isRevealed && cell.neighborMines > 0 ? getNumberColor(cell.neighborMines) : ''} {blinkingCells.has(`${rowIndex},${colIndex}`) ? 'animate-blink' : ''}"
-                style="width: {getCellSize()}px; height: {getCellSize()}px; font-size: {getCellSize() * 0.6}px;"
+                class="border border-base-content/20 rounded font-bold flex items-center justify-center transition-colors relative aspect-square text-[clamp(0.5rem,1.5vw,1.2rem)] {getCellClass(cell, rowIndex, colIndex)} {cell.isRevealed && cell.neighborMines > 0 ? getNumberColor(cell.neighborMines) : ''} {blinkingCells.has(`${rowIndex},${colIndex}`) ? 'animate-blink' : ''}"
                 onclick={() => handleCellClick(rowIndex, colIndex)}
                 onmouseover={() => handleCellMouseOver(rowIndex, colIndex)}
                 disabled={gameStatus !== "playing"}
@@ -1065,66 +1074,73 @@
               </button>
             {/each}
           {/each}
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Settings Panel -->
-    <div class="flex-1 flex flex-col gap-4">
-      <div class="card bg-base-200 shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
+    <!-- Settings Panel - fixed 1/4 width -->
+    <div class="w-full lg:w-1/4 flex flex-col gap-4 lg:min-w-[280px]">
+      <!-- Stats Container -->
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <div class="stats stats-vertical lg:stats-horizontal shadow w-full overflow-visible flex-wrap">
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Mines</div>
+              <div class="stat-value text-lg lg:text-xl text-error">{minesRemaining}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Time</div>
+              <div class="stat-value text-lg lg:text-xl text-info">{formatTime(timer)}</div>
+            </div>
+          </div>
+
+          <!-- Game Status -->
+          {#if gameStatus === "won"}
+            <div class="alert alert-success mt-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>You Won! Time: {formatTime(timer)}</span>
+            </div>
+          {:else if gameStatus === "lost"}
+            <div class="alert alert-error mt-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>Game Over! You hit a mine.</span>
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Settings Container -->
+      <div class="card bg-white shadow-xl flex-1 lg:overflow-y-auto lg:max-h-full">
         <div class="card-body">
-          <h2 class="card-title">Settings</h2>
+          <h2 class="card-title" style="color: #660460;">Settings</h2>
 
           <div class="space-y-4">
-            <!-- Stats -->
-            <div class="stats shadow w-full">
-              <div class="stat py-3">
-                <div class="stat-title text-xs">Mines</div>
-                <div class="stat-value text-2xl">{minesRemaining}</div>
-              </div>
-              <div class="stat py-3">
-                <div class="stat-title text-xs">Time</div>
-                <div class="stat-value text-2xl">{formatTime(timer)}</div>
-              </div>
-            </div>
-
-            <!-- Game Status -->
-            {#if gameStatus === "won"}
-              <div class="alert alert-success">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>You Won! Time: {formatTime(timer)}</span>
-              </div>
-            {:else if gameStatus === "lost"}
-              <div class="alert alert-error">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>Game Over! You hit a mine.</span>
-              </div>
-            {/if}
-
             <!-- Difficulty Selection -->
             <div class="form-control">
               <label class="label">
@@ -1153,7 +1169,8 @@
                 <input
                   type="checkbox"
                   class="checkbox checkbox-sm"
-                  bind:checked={powerUpsEnabled.xray}
+                  checked={powerUpsEnabled.xray}
+                  onchange={(e: Event) => powerUpsEnabled.xray = (e.currentTarget as HTMLInputElement).checked}
                   disabled={gameStatus === "playing"}
                 />
               </label>
@@ -1165,7 +1182,8 @@
                 <input
                   type="checkbox"
                   class="checkbox checkbox-sm"
-                  bind:checked={powerUpsEnabled.detector}
+                  checked={powerUpsEnabled.detector}
+                  onchange={(e: Event) => powerUpsEnabled.detector = (e.currentTarget as HTMLInputElement).checked}
                   disabled={gameStatus === "playing"}
                 />
               </label>
@@ -1177,7 +1195,8 @@
                 <input
                   type="checkbox"
                   class="checkbox checkbox-sm"
-                  bind:checked={powerUpsEnabled.laser}
+                  checked={powerUpsEnabled.laser}
+                  onchange={(e: Event) => powerUpsEnabled.laser = (e.currentTarget as HTMLInputElement).checked}
                   disabled={gameStatus === "playing"}
                 />
               </label>
@@ -1189,7 +1208,8 @@
                 <input
                   type="checkbox"
                   class="checkbox checkbox-sm"
-                  bind:checked={powerUpsEnabled.bomb}
+                  checked={powerUpsEnabled.bomb}
+                  onchange={(e: Event) => powerUpsEnabled.bomb = (e.currentTarget as HTMLInputElement).checked}
                   disabled={gameStatus === "playing"}
                 />
               </label>
@@ -1207,7 +1227,8 @@
                 <input
                   type="checkbox"
                   class="checkbox checkbox-sm"
-                  bind:checked={trapsEnabled.subterfuge}
+                  checked={trapsEnabled.subterfuge}
+                  onchange={(e: Event) => trapsEnabled.subterfuge = (e.currentTarget as HTMLInputElement).checked}
                   disabled={gameStatus === "playing"}
                 />
               </label>
@@ -1219,7 +1240,8 @@
                 <input
                   type="checkbox"
                   class="checkbox checkbox-sm"
-                  bind:checked={trapsEnabled.sabotage}
+                  checked={trapsEnabled.sabotage}
+                  onchange={(e: Event) => trapsEnabled.sabotage = (e.currentTarget as HTMLInputElement).checked}
                   disabled={gameStatus === "playing"}
                 />
               </label>
@@ -1242,14 +1264,6 @@
         </div>
       </div>
 
-      <!-- New Game Button -->
-      <div class="card bg-base-200 shadow-xl">
-        <div class="card-body p-4">
-          <button class="btn btn-primary w-full" onclick={initGame}>
-            New Game
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </div>

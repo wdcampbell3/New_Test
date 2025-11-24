@@ -1288,22 +1288,48 @@
   <title>🗼 Tower Assault | Dougie's Game Hub</title>
 </svelte:head>
 
-<div class="container mx-auto p-4 sm:p-8">
-  <h1 class="text-4xl font-bold mb-6">🗼 Tower Assault</h1>
+<div class="h-[calc(100vh-2rem)] p-4 flex flex-col">
+  <!-- Header with title and game controls -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-4xl font-bold" style="color: #660460;">🗼 Tower Assault</h1>
+    <div class="flex gap-2">
+      {#if !gameRunning && !gameOver}
+        <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" onclick={startGame}>
+          Start Game
+        </button>
+      {:else if gameOver}
+        <button class="btn text-white border-0 hover:opacity-90" style="background-color: #660460;" onclick={startGame}>
+          New Game
+        </button>
+      {:else if wave === 0 || (enemies.length === 0 && enemiesSpawned >= GAME_CONFIG.baseEnemyCount + (wave - 1) * GAME_CONFIG.enemyCountPerWave)}
+        {@const justCompletedLevel = wave > 0 && wave % GAME_CONFIG.wavesPerLevel === 0}
+        {@const nextLevel = level + 1}
+        <button class="btn btn-success" onclick={startWave}>
+          {justCompletedLevel ? `Start Level ${nextLevel}` : `Start Wave ${wave + 1}`}
+        </button>
+      {:else}
+        <button class="btn btn-disabled" disabled>
+          Wave {wave} in Progress
+        </button>
+      {/if}
+    </div>
+  </div>
 
-  <div class="flex flex-col xl:flex-row gap-8 xl:h-[calc(100vh-200px)]">
-    <!-- Game Canvas + Config Container -->
-    <div class="flex-shrink-0 flex flex-col gap-4">
-      <div class="relative">
-        <canvas
-          bind:this={canvas}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-          class="border-4 border-base-300 rounded-lg shadow-xl"
-          onclick={handleCanvasClick}
-          onmousemove={handleCanvasMouseMove}
-          onmouseleave={() => (hoveredCell = null)}
-        ></canvas>
+  <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+    <!-- Game Canvas - scales to fill available space -->
+    <div class="flex-1 flex items-center justify-center min-w-0">
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <div class="relative">
+            <canvas
+              bind:this={canvas}
+              width={CANVAS_WIDTH}
+              height={CANVAS_HEIGHT}
+              class="rounded-lg max-w-full max-h-full"
+              onclick={handleCanvasClick}
+              onmousemove={handleCanvasMouseMove}
+              onmouseleave={() => (hoveredCell = null)}
+            ></canvas>
 
         <!-- Subtle Countdown Timer (Top Right) -->
         {#if countdown > 0}
@@ -1326,17 +1352,197 @@
             </div>
           </div>
         {/if}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls Panel - fixed 1/4 width -->
+    <div class="w-full lg:w-1/4 flex flex-col gap-4 lg:min-w-[280px] lg:overflow-y-auto lg:max-h-full">
+      <!-- Stats Container -->
+      <div class="card bg-white shadow-xl">
+        <div class="card-body p-4">
+          <div class="stats stats-vertical lg:stats-horizontal shadow w-full overflow-visible flex-wrap">
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Health</div>
+              <div class="stat-value text-lg lg:text-xl text-error">{health}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Money</div>
+              <div class="stat-value text-lg lg:text-xl text-success">${money}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Wave</div>
+              <div class="stat-value text-lg lg:text-xl text-info">{wave}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Level</div>
+              <div class="stat-value text-lg lg:text-xl text-warning">{level}</div>
+            </div>
+            <div class="stat py-2 px-2 min-w-0">
+              <div class="stat-title text-xs">Score</div>
+              <div class="stat-value text-lg lg:text-xl">{score}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Container -->
+      <div class="card bg-white shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title" style="color: #660460;">Settings</h2>
+
+          <div class="space-y-4">
+            <!-- Options Section -->
+            <div class="mb-2">
+              <span class="label-text font-semibold">Options</span>
+            </div>
+
+            <!-- Sound Effects Toggle -->
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Sound Effects</span>
+                <input type="checkbox" class="checkbox" bind:checked={soundEnabled} />
+              </label>
+            </div>
+
+            <!-- Randomize Path Option -->
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Randomize Road Pattern</span>
+                <input type="checkbox" class="checkbox" bind:checked={randomizePath} disabled={gameRunning} />
+              </label>
+            </div>
+
+            <!-- Second Entrance Option -->
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Second Enemy Entrance</span>
+                <input type="checkbox" class="checkbox" bind:checked={secondEntrance} disabled={gameRunning} />
+              </label>
+            </div>
+
+            <!-- Air Attack Option -->
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Air Attack</span>
+                <input type="checkbox" class="checkbox" bind:checked={airAttackEnabled} disabled={gameRunning} />
+              </label>
+            </div>
+
+            <!-- Enemy Speed Setting -->
+            <div class="divider my-2"></div>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text font-semibold">Enemy Speed</span>
+              </label>
+              <div class="flex gap-2">
+                <button
+                  class="btn btn-xs flex-1 {enemySpeedMultiplier === 0.5 ? 'btn-success' : 'btn-outline'}"
+                  onclick={() => (enemySpeedMultiplier = 0.5)}
+                  disabled={gameRunning}
+                >
+                  Slow (0.5x)
+                </button>
+                <button
+                  class="btn btn-xs flex-1 {enemySpeedMultiplier === 1 ? 'btn-warning' : 'btn-outline'}"
+                  onclick={() => (enemySpeedMultiplier = 1)}
+                  disabled={gameRunning}
+                >
+                  Normal (1x)
+                </button>
+                <button
+                  class="btn btn-xs flex-1 {enemySpeedMultiplier === 1.5 ? 'btn-error' : 'btn-outline'}"
+                  onclick={() => (enemySpeedMultiplier = 1.5)}
+                  disabled={gameRunning}
+                >
+                  Fast (1.5x)
+                </button>
+              </div>
+            </div>
+
+            <!-- Game Status -->
+            {#if gameOver}
+              <div class="alert alert-error">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="stroke-current shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>Game Over! Final Score: {score}</span>
+              </div>
+            {/if}
+
+            <!-- Tower Selection -->
+            <div class="divider">Select Tower to Place</div>
+            <div class="grid grid-cols-1 gap-2">
+              {#each Object.entries(towerTypes).sort(([, a], [, b]) => a.cost - b.cost) as [key, tower]}
+                {@const quantity = towerQuantities[key as keyof typeof towerQuantities]}
+                {@const isOutOfStock = quantity !== 0 && quantity <= 0}
+                {@const isSelected = selectedTowerType === key}
+                <button
+                  class="btn btn-block justify-start text-left {isSelected ? 'btn-success' : ''}"
+                  style="{isSelected ? 'background-color: #15803d; border-color: #15803d; color: white;' : `background-color: ${tower.color}; border-color: ${tower.color}; color: white;`}"
+                  onclick={() => selectTowerType(key as "basic" | "sniper" | "blast" | "laser" | "freeze" | "missile")}
+                  disabled={!gameRunning || money < tower.cost || isOutOfStock}
+                >
+                  <div class="flex justify-between items-center w-full gap-2 p-2">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold">{tower.emoji} {tower.name}</span>
+                      <span class="text-xs opacity-90">- {tower.description}</span>
+                    </div>
+                    <div class="flex gap-2 items-center flex-shrink-0">
+                      <span>${tower.cost}</span>
+                      {#if quantity > 0}
+                        <span class="badge badge-sm">{quantity} left</span>
+                      {/if}
+                    </div>
+                  </div>
+                </button>
+              {/each}
+            </div>
+
+            {#if selectedTowerType}
+              <div class="alert alert-success">
+                <span>✓ Click on the grid to place tower</span>
+              </div>
+            {/if}
+
+            <!-- Instructions -->
+            <div class="divider"></div>
+            <div>
+              <h3 class="font-semibold mb-2">How to Play:</h3>
+              <ul class="list-disc list-inside space-y-1 text-sm">
+                <li>Start the game and then start each wave</li>
+                <li>Select a tower type and click to place it</li>
+                <li>Towers automatically shoot enemies in range</li>
+                <li>Don't let enemies reach the end of the path</li>
+                <li>Earn money by defeating enemies</li>
+                <li>Complete {GAME_CONFIG.wavesPerLevel} waves to advance a level</li>
+                <li>Enemy speed increases {GAME_CONFIG.enemySpeedScalingType === 'multiplicative' ? (GAME_CONFIG.enemySpeedPerLevel * 100).toFixed(0) + '%' : GAME_CONFIG.enemySpeedPerLevel + 'x'} each level</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Game Configuration Panel -->
-      <div class="card bg-base-200 shadow-xl">
+      <div class="card bg-white shadow-xl">
         <div class="card-body">
           <button
             class="flex justify-between items-center w-full text-left hover:bg-base-300 -m-2 p-2 rounded-lg transition-colors"
             onclick={() => showConfigPanel = !showConfigPanel}
             disabled={gameRunning}
           >
-            <h2 class="card-title">⚙️ Game Configuration</h2>
+            <h2 class="card-title" style="color: #660460;">⚙️ Game Configuration</h2>
             <span class="text-sm">
               {showConfigPanel ? '▼ Hide' : '▶ Show'}
             </span>
@@ -1345,7 +1551,7 @@
           {#if showConfigPanel}
             <div class="divider my-2"></div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[400px] overflow-y-auto">
+            <div class="grid grid-cols-1 gap-6 max-h-[400px] overflow-y-auto">
               <!-- Economy Settings -->
               <div class="space-y-4">
                 <h3 class="font-semibold text-lg">💰 Economy</h3>
@@ -1757,213 +1963,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Controls Panel -->
-    <div class="flex-1 flex flex-col gap-4">
-      <!-- Stats Container -->
-      <div class="card bg-base-200 shadow-xl">
-        <div class="card-body p-4">
-          <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
-            <div class="stat py-2">
-              <div class="stat-title text-xs">Health</div>
-              <div class="stat-value text-2xl text-error">{health}</div>
-            </div>
-            <div class="stat py-2">
-              <div class="stat-title text-xs">Money</div>
-              <div class="stat-value text-2xl text-success">${money}</div>
-            </div>
-            <div class="stat py-2">
-              <div class="stat-title text-xs">Wave</div>
-              <div class="stat-value text-2xl text-info">
-                {wave}
-              </div>
-            </div>
-            <div class="stat py-2">
-              <div class="stat-title text-xs">Level</div>
-              <div class="stat-value text-2xl text-warning">{level}</div>
-            </div>
-            <div class="stat py-2">
-              <div class="stat-title text-xs">Score</div>
-              <div class="stat-value text-2xl">{score}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings Container -->
-      <div class="card bg-base-200 shadow-xl flex-1 xl:overflow-y-auto xl:max-h-full">
-        <div class="card-body">
-          <h2 class="card-title">Settings</h2>
-
-        <div class="space-y-4">
-          <!-- Options Section -->
-          <div class="mb-2">
-            <span class="label-text font-semibold">Options</span>
-          </div>
-
-          <!-- Sound Effects Toggle -->
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text">Sound Effects</span>
-              <input type="checkbox" class="checkbox" bind:checked={soundEnabled} />
-            </label>
-          </div>
-
-          <!-- Randomize Path Option -->
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text">Randomize Road Pattern</span>
-              <input type="checkbox" class="checkbox" bind:checked={randomizePath} disabled={gameRunning} />
-            </label>
-          </div>
-
-          <!-- Second Entrance Option -->
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text">Second Enemy Entrance</span>
-              <input type="checkbox" class="checkbox" bind:checked={secondEntrance} disabled={gameRunning} />
-            </label>
-          </div>
-
-          <!-- Air Attack Option -->
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text">Air Attack</span>
-              <input type="checkbox" class="checkbox" bind:checked={airAttackEnabled} disabled={gameRunning} />
-            </label>
-          </div>
-
-          <!-- Enemy Speed Setting -->
-          <div class="divider my-2"></div>
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-semibold">Enemy Speed</span>
-            </label>
-            <div class="flex gap-2">
-              <button
-                class="btn btn-xs flex-1 {enemySpeedMultiplier === 0.5 ? 'btn-success' : 'btn-outline'}"
-                onclick={() => (enemySpeedMultiplier = 0.5)}
-                disabled={gameRunning}
-              >
-                Slow (0.5x)
-              </button>
-              <button
-                class="btn btn-xs flex-1 {enemySpeedMultiplier === 1 ? 'btn-warning' : 'btn-outline'}"
-                onclick={() => (enemySpeedMultiplier = 1)}
-                disabled={gameRunning}
-              >
-                Normal (1x)
-              </button>
-              <button
-                class="btn btn-xs flex-1 {enemySpeedMultiplier === 1.5 ? 'btn-error' : 'btn-outline'}"
-                onclick={() => (enemySpeedMultiplier = 1.5)}
-                disabled={gameRunning}
-              >
-                Fast (1.5x)
-              </button>
-            </div>
-          </div>
-
-          <!-- Game Status -->
-          {#if gameOver}
-            <div class="alert alert-error">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="stroke-current shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>Game Over! Final Score: {score}</span>
-            </div>
-          {/if}
-
-          <!-- Tower Selection -->
-          <div class="divider">Select Tower to Place</div>
-          <div class="grid grid-cols-1 gap-2">
-            {#each Object.entries(towerTypes).sort(([, a], [, b]) => a.cost - b.cost) as [key, tower]}
-              {@const quantity = towerQuantities[key as keyof typeof towerQuantities]}
-              {@const isOutOfStock = quantity !== 0 && quantity <= 0}
-              {@const isSelected = selectedTowerType === key}
-              <button
-                class="btn btn-block justify-start text-left {isSelected ? 'btn-success' : ''}"
-                style="{isSelected ? 'background-color: #15803d; border-color: #15803d; color: white;' : `background-color: ${tower.color}; border-color: ${tower.color}; color: white;`}"
-                onclick={() => selectTowerType(key as "basic" | "sniper" | "blast" | "laser" | "freeze" | "missile")}
-                disabled={!gameRunning || money < tower.cost || isOutOfStock}
-              >
-                <div class="flex justify-between items-center w-full gap-2">
-                  <div class="flex items-center gap-2">
-                    <span class="font-bold">{tower.emoji} {tower.name}</span>
-                    <span class="text-xs opacity-90">- {tower.description}</span>
-                  </div>
-                  <div class="flex gap-2 items-center flex-shrink-0">
-                    <span>${tower.cost}</span>
-                    {#if quantity > 0}
-                      <span class="badge badge-sm">{quantity} left</span>
-                    {/if}
-                  </div>
-                </div>
-              </button>
-            {/each}
-          </div>
-
-          {#if selectedTowerType}
-            <div class="alert alert-success">
-              <span>✓ Click on the grid to place tower</span>
-            </div>
-          {/if}
-
-          <!-- Instructions -->
-          <div class="divider"></div>
-          <div>
-            <h3 class="font-semibold mb-2">How to Play:</h3>
-            <ul class="list-disc list-inside space-y-1 text-sm">
-              <li>Start the game and then start each wave</li>
-              <li>Select a tower type and click to place it</li>
-              <li>Towers automatically shoot enemies in range</li>
-              <li>Don't let enemies reach the end of the path</li>
-              <li>Earn money by defeating enemies</li>
-              <li>Complete {GAME_CONFIG.wavesPerLevel} waves to advance a level</li>
-              <li>Enemy speed increases {GAME_CONFIG.enemySpeedScalingType === 'multiplicative' ? (GAME_CONFIG.enemySpeedPerLevel * 100).toFixed(0) + '%' : GAME_CONFIG.enemySpeedPerLevel + 'x'} each level</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Game Controls - Always Visible -->
-    <div class="card bg-base-200 shadow-xl">
-      <div class="card-body p-4">
-        <div class="flex gap-2">
-          {#if !gameRunning && !gameOver}
-            <button class="btn btn-primary flex-1" onclick={startGame}>
-              Start Game
-            </button>
-          {:else if gameOver}
-            <button class="btn btn-primary flex-1" onclick={startGame}>
-              New Game
-            </button>
-          {:else if wave === 0 || (enemies.length === 0 && enemiesSpawned >= GAME_CONFIG.baseEnemyCount + (wave - 1) * GAME_CONFIG.enemyCountPerWave)}
-            {@const justCompletedLevel = wave > 0 && wave % GAME_CONFIG.wavesPerLevel === 0}
-            {@const nextLevel = level + 1}
-            <button class="btn btn-success flex-1" onclick={startWave}>
-              {justCompletedLevel ? `Start Level ${nextLevel}` : `Start Wave ${wave + 1}`}
-            </button>
-          {:else}
-            <button class="btn btn-disabled flex-1" disabled>
-              Wave {wave} in Progress
-            </button>
-          {/if}
-        </div>
-      </div>
-    </div>
-  </div>
   </div>
 </div>
 
