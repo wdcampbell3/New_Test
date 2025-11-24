@@ -9,6 +9,11 @@
 
   onDestroy(() => {
     hideSidebar.set(false)
+    // Reset body styles when leaving page
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = ''
+      document.body.style.margin = ''
+    }
   })
 
   let container: HTMLDivElement
@@ -435,6 +440,10 @@
   }
 
   onMount(() => {
+    // Set body styles for fullscreen game
+    document.body.style.margin = '0'
+    document.body.style.overflow = 'hidden'
+
     loadAvailableMaps()
     loadStaticMaps()
     initThree()
@@ -2451,10 +2460,6 @@
 </div>
 
 <style>
-  :global(body) { margin: 0; overflow: hidden; }
-  :global(html), :global(body) { width: 100%; height: 100%; }
-  :global(canvas) { display: block; width: 100% !important; height: 100% !important; }
-
   .power-up-flash {
     animation: flashPulse 0.3s ease-in-out infinite alternate;
   }

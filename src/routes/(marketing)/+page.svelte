@@ -3,19 +3,19 @@
     {
       name: "🏗️ World Builder",
       path: "/world-builder",
-      description: "Create and explore custom 3D worlds with your own designs",
+      description: "Design 3D worlds with hundreds of models, then explore them in first-person mode",
       image: "/game-thumbs/world-builder.jpg",
     },
     {
       name: "🎯 Blocky Shooter",
       path: "/fps-game",
-      description: "First-person shooter with destructible environments",
+      description: "First-person shooter with multiple weapons, enemy types, and power-ups across custom maps",
       image: "/game-thumbs/fps-game.jpg",
     },
     {
       name: "🚀 Starship Flyer",
       path: "/starship-flyer",
-      description: "Arcade space dogfighting with waves of alien enemies",
+      description: "Physics-based 3D dogfighting with barrel rolls, weapon pickups, and boss battles",
       image: "/game-thumbs/starship-flyer.jpg",
     },
   ]
@@ -24,37 +24,37 @@
     {
       name: "👾 Space Invaders",
       path: "/space-invaders",
-      description: "Defend Earth from alien invasion",
+      description: "Classic arcade defense with shield bunkers, boss waves, and 6 different power-ups",
       image: "/game-thumbs/space-invaders.jpg",
     },
     {
       name: "💡 Light Particles",
       path: "/light-cycles",
-      description: "TRON-style light particle battles with power-ups",
+      description: "TRON-style trail combat—dodge walls while boxing in your AI opponent",
       image: "/game-thumbs/light-particles.jpg",
     },
     {
       name: "🏓 Cosmic Pong",
       path: "/pong",
-      description: "Classic arcade game - beat the AI!",
+      description: "Spaceship paddle action with freeze, lightning, and shrink power-ups",
       image: "/game-thumbs/cosmic-pong.jpg",
     },
     {
       name: "🗼 Tower Assault",
       path: "/tower-defense",
-      description: "Build towers and defend your base",
+      description: "Strategic tower placement with 6 tower types across 5 escalating waves",
       image: "/game-thumbs/tower-assault.jpg",
     },
     {
       name: "💣 Mine Buster",
       path: "/minesweeper",
-      description: "Classic puzzle game with power-ups - find all the mines",
+      description: "Logic-based minesweeper with X-Ray vision, lasers, and bombs—plus traps!",
       image: "/game-thumbs/mine-buster.jpg",
     },
     {
       name: "🐍 Snake-adelic",
       path: "/worm-game",
-      description: "Psychedelic snake game with power-ups",
+      description: "Trippy snake game with bizarre power-ups on pulsing psychedelic backgrounds",
       image: "/game-thumbs/snake-adelic.jpg",
     },
   ]
@@ -81,9 +81,10 @@
 
     <!-- 3D Games Section -->
     <div class="mb-16">
-      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">
+      <h2 class="text-4xl font-bold mb-2 text-center" style="color: #660460;">
         3D Games
       </h2>
+      <p class="text-lg text-gray-600 text-center mb-8">Build a custom world... And play games in it!</p>
       <div
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
       >
@@ -112,9 +113,10 @@
 
     <!-- 2D Games Section -->
     <div>
-      <h2 class="text-4xl font-bold mb-8 text-center" style="color: #660460;">
+      <h2 class="text-4xl font-bold mb-2 text-center" style="color: #660460;">
         2D Games
       </h2>
+      <p class="text-lg text-gray-600 text-center mb-8">Power Packed Upgrades to Old Classics!</p>
       <div
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto"
       >
