@@ -1855,15 +1855,17 @@
     weaponInventory = weaponInventory
   }
 
-  $: if (score >= nextLevelScore && isPlaying && enemies.length === 0) levelUp()
-
   async function levelUp() {
-    if (isLoadingLevel) return
+    if (isLoadingLevel || showLevelComplete) return
     isLoadingLevel = true
     showLevelComplete = true
+
+    // Update nextLevelScore IMMEDIATELY to prevent re-triggering
+    level++
+    nextLevelScore = level * 1000
+
     await new Promise(r => setTimeout(r, 2000))
     showLevelComplete = false
-    level++; nextLevelScore = level * 1000
     gameConfig.enemyCount = Math.min(gameConfig.enemyCount + 1, 15)
     gameConfig.enemySpeed *= 1.05
     gameConfig.enemyFireRate = Math.max(gameConfig.enemyFireRate * 0.95, 800)
